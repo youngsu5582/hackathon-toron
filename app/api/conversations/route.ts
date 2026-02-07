@@ -75,11 +75,38 @@ export async function POST(request: NextRequest) {
       data: { turnCount: { increment: 1 } },
     });
 
+    // Gather audience comments since last turn to include in prompt
+    let enrichedContent = content;
+    if (conversationId) {
+      const recentComments = await prisma.comment.findMany({
+        where: { conversationId: conversation.id },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      });
+
+      if (recentComments.length > 0) {
+        const commentLines = recentComments
+          .reverse()
+          .map((c) => {
+            const sideLabel = c.side === "user"
+              ? `[${conversation!.userSide || "사용자"} 응원]`
+              : c.side === "agent"
+                ? `[${conversation!.agentSide || "AI"} 응원]`
+                : "[중립]";
+            const tagLabel = c.isTagIn ? " (태그인 참전!)" : "";
+            return `- ${c.nickname} ${sideLabel}${tagLabel}: "${c.content}"`;
+          })
+          .join("\n");
+
+        enrichedContent = `${content}\n\n[관중석 반응 — 이 의견들을 토론에 반영하세요. 관중 응원은 판결에 영향을 줍니다!]\n${commentLines}`;
+      }
+    }
+
     // Create sandbox and launch agent (fire-and-forget, no streaming connection)
     const { sandboxId } = await createAndLaunchAgent(
       volumeId,
       conversation.id,
-      content,
+      enrichedContent,
       sessionId,
       {
         debateTopic: conversation.debateTopic || undefined,

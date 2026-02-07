@@ -181,6 +181,15 @@ export interface DebateMetadata {
   agentSide: string;
 }
 
+export interface AudienceComment {
+  id: string;
+  nickname: string;
+  content: string;
+  side: string | null;
+  isTagIn: boolean;
+  createdAt: string;
+}
+
 export interface ConversationResponse {
   id: string;
   status: "idle" | "running" | "completed" | "error";
@@ -192,6 +201,7 @@ export interface ConversationResponse {
   turnCount?: number;
   maxTurns?: number;
   votes?: { user: number; agent: number };
+  comments?: AudienceComment[];
 }
 
 export interface SendMessageRequest {

@@ -8,26 +8,38 @@ datasource db {
 }
 
 model Conversation {
-  id           String   @id @default(cuid())
-  status       String   @default("idle") // idle, running, completed, error
-  volumeId     String?                   // Moru volume ID
-  sandboxId    String?                   // Current sandbox ID (null when not running)
-  sessionId    String?                   // Claude Code session ID for resume
+  id           String    @id @default(cuid())
+  status       String    @default("idle") // idle, running, completed, error
+  volumeId     String?                    // Moru volume ID
+  sandboxId    String?                    // Current sandbox ID (null when not running)
+  sessionId    String?                    // Claude Code session ID for resume
   errorMessage String?                   // Error message if status=error
   debateTopic  String?                   // e.g. "정규화 vs 역정규화"
   userSide     String?                   // e.g. "정규화 찬성"
   agentSide    String?                   // e.g. "역정규화 찬성"
-  turnCount    Int      @default(0)      // Current debate turn
-  maxTurns     Int      @default(3)      // Turns before verdict is available
+  turnCount    Int       @default(0)     // Current debate turn
+  maxTurns     Int       @default(3)     // Turns before verdict is available
   votes        Vote[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  comments     Comment[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Vote {
   id             String       @id @default(cuid())
   conversationId String
   side           String       // "user" | "agent"
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt      DateTime     @default(now())
+}
+
+model Comment {
+  id             String       @id @default(cuid())
+  conversationId String
+  nickname       String       @default("관중")
+  content        String
+  side           String?      // "user" | "agent" | null (neutral)
+  isTagIn        Boolean      @default(false) // true = 대신 반론 (tag-in), false = 일반 코멘트
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   createdAt      DateTime     @default(now())
 }

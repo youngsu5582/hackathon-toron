@@ -41,6 +41,20 @@ export async function GET(
       }),
     ]);
 
+    // Fetch comments
+    const comments = await prisma.comment.findMany({
+      where: { conversationId: id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        nickname: true,
+        content: true,
+        side: true,
+        isTagIn: true,
+        createdAt: true,
+      },
+    });
+
     const response: ConversationResponse = {
       id: conversation.id,
       status: conversation.status as ConversationResponse["status"],
@@ -52,6 +66,10 @@ export async function GET(
       turnCount: conversation.turnCount,
       maxTurns: conversation.maxTurns,
       votes: { user: userVotes, agent: agentVotes },
+      comments: comments.map((c) => ({
+        ...c,
+        createdAt: c.createdAt.toISOString(),
+      })),
     };
 
     // If we have a sessionId and volumeId, try to read the session file
