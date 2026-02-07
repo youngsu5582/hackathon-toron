@@ -1,173 +1,123 @@
-[한국어](README.ko.md) | **English**
+# Toron - AI Debate Arena
 
-# hackathon-starter
+> AI 에이전트끼리 또는 사용자와 AI가 실시간으로 기술 토론을 벌이는 플랫폼
 
-Documentation for the AI Agent Hackathon and starter repo for building AI agents with [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/typescript) and [Moru](https://github.com/moru-ai/moru) cloud sandboxes.
+Toron은 한국 개발자 커뮤니티 문화를 반영한 AI 토론 아레나입니다. Claude Agent SDK와 Moru 클라우드 샌드박스를 활용하여, 격리된 환경에서 AI 에이전트가 실시간 검색, 코드 실행, 벤치마크 차트 생성까지 수행하며 토론합니다.
 
-## Deliverable
+## Highlights
 
-Your goal is simple: build a **web app** where anyone can talk to your Claude agent.
+- **User vs AI**: 사용자가 직접 AI 토론 챔피언과 5라운드 토론
+- **AI vs AI**: 두 AI 페르소나(알파 vs 오메가)가 자동으로 배틀
+- **실시간 증거 수집**: WebSearch, 코드 실행, matplotlib 차트 생성
+- **관중 참여**: 투표, 댓글, 태그인(대신 반론) 시스템
+- **AI 판결**: 토론 종료 후 "법정장 김판결" 페르소나가 채점 및 판결
 
-This repo comes with a chat UI, file viewer, and a sandbox setup for running Claude Agent SDK. If you want to build from scratch, go for it. If you'd rather just tweak the agent logic, fork this repo, make your changes, deploy, and submit your URL.
+## Tech Stack
 
-## Timetable
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, Tailwind CSS 4 |
+| Backend | Next.js API Routes, Prisma ORM |
+| Database | PostgreSQL (Neon/Supabase) |
+| Agent Runtime | Claude Agent SDK 2.1.1, Moru Sandboxes |
+| Deployment | Vercel (Web), Moru (Agent) |
 
-| Time | What |
-|------|------|
-| 12:00 – 12:30 | Check-in & rules |
-| 12:30 – 16:00 | Happy hacking |
-| 16:00 – 16:45 | Demos |
-| 16:45 – 17:00 | Judging & awards |
-| 17:00 – 17:45 | Networking |
-| 17:45 – 18:00 | Cleanup |
-
-## Submission
-
-Post your accessible URL in the `#hackathon` channel on [Seoul AI Builders Discord](https://discord.gg/g5M7rqfEPY).
-
-> "Team XYZ 해커톤 제출" or "오민석 해커톤 제출"
-
-**You can submit any time before 16:00. The last team to submit demos first.**
-
-If you're building your own repo from scratch, just submit to Discord when you're ready! If you're using this starter repo, follow the prerequisites below.
-
-## Judging Criteria
-
-1. **Community vote** — participants vote directly. Each person gets 5 votes. Each vote is worth 1 point.
-2. **Organizer vote (5 teams)** — organizers vote for a total of 5 teams. Each organizer vote is worth 5 points.
-3. **URL accessibility** — teams that complete web deployment get 10 bonus points.
-
-## Prerequisites (for this starter repo)
-
-Please have these ready before the hackathon starts:
-
-1. **Moru API key** — [Moru](https://github.com/moru-ai/moru) is a sandbox for running Claude Agent SDK on the cloud. Each agent runs in its own isolated environment. Get your API key at [moru.io/dashboard](https://moru.io/dashboard?tab=keys). It's free!
-
-> To deploy Claude Agent SDK to the web, you need some form of sandboxing — whether it's Moru or another provider. See the [hosting docs](https://platform.claude.com/docs/en/agent-sdk/hosting) and [secure deployment docs](https://platform.claude.com/docs/en/agent-sdk/secure-deployment) for all options.
-
-2. **Anthropic API key** — create one at [platform.claude.com](https://platform.claude.com/) if you don't already have one. You can also use your local Claude's `.credentials.json` (ask Claude Code "find my credentials.json" and it'll locate it for you), but an API key is recommended for security. Note: API key costs are on you.
-
-3. **Vercel account** — sign up at [vercel.com](https://vercel.com) for deployment. The free plan is more than enough.
-
-4. **PostgreSQL database** — create a free account on [Neon](https://neon.tech) or [Supabase](https://supabase.com). Both have generous free tiers, no credit card needed.
-
-Vercel, Neon, and Supabase are all mature services with great documentation. If you need help setting them up, just ask ChatGPT or Claude and they'll walk you through it step by step!
-
-## Deploy (Vercel) — do this first!
-
-> Time is short. **Deploy before you build.** Get your URL live first, then iterate on the agent logic. This is the safest approach.
-
-This repo uses **pnpm**. If you don't have it installed, just ask your coding agent to "install pnpm" and it'll handle it.
-
-### 1. Fork & clone
+## Quick Start
 
 ```bash
-git clone https://github.com/moru-ai/hackathon-starter.git
-cd hackathon-starter
+# 1. Clone & install
+git clone <repo-url> && cd hackathon
 pnpm install
-```
 
-### 2. Change the template alias
-
-Template aliases are globally unique across Moru. Change it to something unique like your team name. You need to update **both files**:
-
-- `agent/template.ts` — the `templateAlias` variable
-- `lib/moru.ts` — the `TEMPLATE_NAME` constant
-
-e.g. `moru-hackathon-agent` → `team-xyz-agent`
-
-### 3. Set up environment variables
-
-```bash
+# 2. Set up environment
 cp .env.example .env
-```
+# Fill in: DATABASE_URL, MORU_API_KEY, ANTHROPIC_API_KEY, BASE_URL
 
-Fill in your `.env`:
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string (copy from Neon/Supabase) |
-| `MORU_API_KEY` | Moru API key |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `BASE_URL` | Your deploy URL (e.g. `https://your-app.vercel.app`) |
-
-### 4. Push DB schema
-
-```bash
+# 3. Push database schema
 pnpm db:push
-```
 
-> Verify: you should see "Your database is now in sync with your Prisma schema".
-
-### 5. Build the agent template
-
-```bash
+# 4. Build agent template (remote Docker build on Moru)
 pnpm build:template
-```
 
-This builds the agent Docker image on Moru. No Docker needed locally — Moru builds it remotely.
-
-> Verify: the template ID and alias are printed when the build finishes.
-
-### 6. Deploy to Vercel
-
-```bash
-npm i -g vercel
-vercel login
-vercel --prod -y
-```
-
-> Verify: `vercel whoami` to check you're logged in.
-
-Add env vars to Vercel too:
-
-```bash
-printf 'your-database-url' | vercel env add DATABASE_URL production
-printf 'your-moru-api-key' | vercel env add MORU_API_KEY production
-printf 'your-anthropic-api-key' | vercel env add ANTHROPIC_API_KEY production
-printf 'https://your-app.vercel.app' | vercel env add BASE_URL production
-```
-
-Redeploy after adding env vars:
-
-```bash
-vercel --prod -y
-```
-
-> Verify: open the deployed URL in your browser. If you see the chat UI, you're good! Send a message and check that the agent responds.
-
-You now have a live URL! From here, just iterate on the agent logic.
-
-## Local Development
-
-If you want to develop locally after deploying, you'll need:
-
-- **Node.js 20+** & **pnpm** — `npm install -g pnpm`
-- **Moru CLI** — `curl -fsSL https://moru.io/cli/install.sh | bash && moru auth login`
-- **ngrok** — exposes your local server to the internet. Install from [ngrok.com](https://ngrok.com)
-
-### 1. Start ngrok
-
-```bash
-ngrok http 3000
-```
-
-Copy the URL (e.g. `https://abc123.ngrok-free.app`) and set it as `BASE_URL` in your `.env`.
-
-### 2. Start the dev server
-
-```bash
+# 5. Run locally
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Production 배포는 [docs/deployment.md](docs/deployment.md) 참조.
 
+## Documentation
 
-## References
-- [Claude Agent SDK Docs](https://platform.claude.com/docs/en/agent-sdk/overview)
+체계적인 기술 문서는 [`docs/`](docs/) 디렉토리에 있습니다:
 
-- [Moru Docs](https://moru.io/docs)
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | 시스템 아키텍처, 데이터 플로우, Fire-and-Forget 패턴 |
+| [Agent System](docs/agent-system.md) | 에이전트 프로토콜, 페르소나, 라운드 시스템, 도구 활용 |
+| [API Reference](docs/api-reference.md) | 전체 API 엔드포인트 명세 |
+| [Database Schema](docs/database-schema.md) | Prisma 모델, 관계, 필드 설명 |
+| [Frontend Guide](docs/frontend-guide.md) | 컴포넌트 구조, UI 상태 머신, 스타일 시스템 |
+| [Deployment](docs/deployment.md) | Vercel/Moru 배포, 환경변수, 트러블슈팅 |
 
----
+## Project Structure
 
-If something goes wrong, ask for help in the [Discord `#hackathon` channel](https://discord.gg/g5M7rqfEPY)!
+```
+hackathon/
+├── app/                          # Next.js App Router
+│   ├── page.tsx                  # 메인 토론 아레나 (상태 머신 기반)
+│   ├── gallery/page.tsx          # 토론 갤러리 (전체 목록)
+│   ├── debate/[id]/              # 개별 토론 공유 페이지
+│   └── api/
+│       ├── conversations/        # 대화 CRUD + 메시지 전송
+│       │   └── [id]/
+│       │       ├── route.ts      # GET: 대화 조회 (메시지+증거)
+│       │       ├── status/       # POST: 에이전트 콜백
+│       │       ├── vote/         # POST: 투표
+│       │       ├── comments/     # POST: 관중 댓글
+│       │       ├── verdict/      # POST: 유저 판결 (AI vs AI)
+│       │       └── files/        # GET: 볼륨 파일 조회
+│       └── debates/              # GET: 전체 토론 목록
+│
+├── components/
+│   ├── debate/                   # 토론 UI (토픽카드, VS화면, 배틀뷰 등)
+│   ├── chat/                     # 메시지 렌더링 (세션 파싱)
+│   └── workspace/                # 증거실 + 파일 탐색기
+│
+├── lib/
+│   ├── types.ts                  # TypeScript 타입 정의
+│   ├── moru.ts                   # Moru SDK 래퍼 (샌드박스/볼륨)
+│   ├── debate-topics.ts          # 빌트인 토론 주제 5개
+│   ├── evidence-parser.ts        # 도구 사용 → 증거 카드 변환
+│   └── session-parser.ts         # JSONL 세션 파싱
+│
+├── agent/
+│   ├── src/agent.ts              # 에이전트 엔트리포인트
+│   ├── template.ts               # Moru 템플릿 빌드 설정
+│   ├── Dockerfile                # 샌드박스 이미지
+│   └── .claude/CLAUDE.md         # 에이전트 인스트럭션 (페르소나)
+│
+└── prisma/schema.prisma          # DB 스키마 (4 모델)
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL 연결 문자열 |
+| `MORU_API_KEY` | Yes | Moru API 키 ([dashboard](https://moru.io/dashboard?tab=keys)) |
+| `ANTHROPIC_API_KEY` | Yes | Claude API 키 |
+| `BASE_URL` | Yes | 배포 URL (trailing slash 금지!) |
+| `GEMINI_API_KEY` | No | 이미지 생성용 |
+
+## Scripts
+
+```bash
+pnpm dev              # 로컬 개발 서버 (Turbopack)
+pnpm build            # 프로덕션 빌드
+pnpm db:push          # DB 스키마 적용
+pnpm db:studio        # Prisma Studio (DB GUI)
+pnpm build:template   # Moru 에이전트 템플릿 빌드
+```
+
+## License
+
+MIT
