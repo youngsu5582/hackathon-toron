@@ -13,7 +13,7 @@ import type { SendMessageRequest, SendMessageResponse } from "@/lib/types";
 export async function POST(request: NextRequest) {
   try {
     const body: SendMessageRequest = await request.json();
-    const { conversationId, content } = body;
+    const { conversationId, content, debateMetadata, isVerdictRequest } = body;
 
     if (!content?.trim()) {
       return NextResponse.json(
@@ -49,9 +49,14 @@ export async function POST(request: NextRequest) {
       volumeId = conversation.volumeId!;
       sessionId = conversation.sessionId || undefined;
     } else {
-      // New conversation - create record first
+      // New conversation - create record first (with debate metadata if provided)
       conversation = await prisma.conversation.create({
-        data: { status: "idle" },
+        data: {
+          status: "idle",
+          debateTopic: debateMetadata?.topic,
+          userSide: debateMetadata?.userSide,
+          agentSide: debateMetadata?.agentSide,
+        },
       });
 
       // Create volume for this conversation
@@ -64,12 +69,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Increment turn count
+    conversation = await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { turnCount: { increment: 1 } },
+    });
+
     // Create sandbox and launch agent (fire-and-forget, no streaming connection)
     const { sandboxId } = await createAndLaunchAgent(
       volumeId,
       conversation.id,
       content,
-      sessionId
+      sessionId,
+      {
+        debateTopic: conversation.debateTopic || undefined,
+        userSide: conversation.userSide || undefined,
+        agentSide: conversation.agentSide || undefined,
+        turnCount: conversation.turnCount,
+        isVerdictRequest: isVerdictRequest || false,
+      }
     );
 
     // Update conversation to running state

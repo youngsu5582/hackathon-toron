@@ -17,6 +17,11 @@ export async function GET(
 
     const conversation = await prisma.conversation.findUnique({
       where: { id },
+      include: {
+        _count: {
+          select: { votes: true },
+        },
+      },
     });
 
     if (!conversation) {
@@ -26,11 +31,27 @@ export async function GET(
       );
     }
 
+    // Count votes by side
+    const [userVotes, agentVotes] = await Promise.all([
+      prisma.vote.count({
+        where: { conversationId: id, side: "user" },
+      }),
+      prisma.vote.count({
+        where: { conversationId: id, side: "agent" },
+      }),
+    ]);
+
     const response: ConversationResponse = {
       id: conversation.id,
       status: conversation.status as ConversationResponse["status"],
       messages: [],
       errorMessage: conversation.errorMessage || undefined,
+      debateTopic: conversation.debateTopic || undefined,
+      userSide: conversation.userSide || undefined,
+      agentSide: conversation.agentSide || undefined,
+      turnCount: conversation.turnCount,
+      maxTurns: conversation.maxTurns,
+      votes: { user: userVotes, agent: agentVotes },
     };
 
     // If we have a sessionId and volumeId, try to read the session file

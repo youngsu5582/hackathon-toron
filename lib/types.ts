@@ -175,16 +175,30 @@ export function isImageBlock(block: ContentBlock): block is ImageBlock {
 // API Types
 // ============================================================================
 
+export interface DebateMetadata {
+  topic: string;
+  userSide: string;
+  agentSide: string;
+}
+
 export interface ConversationResponse {
   id: string;
   status: "idle" | "running" | "completed" | "error";
   messages: SessionEntry[];
   errorMessage?: string;
+  debateTopic?: string;
+  userSide?: string;
+  agentSide?: string;
+  turnCount?: number;
+  maxTurns?: number;
+  votes?: { user: number; agent: number };
 }
 
 export interface SendMessageRequest {
   conversationId: string | null;
   content: string;
+  debateMetadata?: DebateMetadata;
+  isVerdictRequest?: boolean;
 }
 
 export interface SendMessageResponse {
