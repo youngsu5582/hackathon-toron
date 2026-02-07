@@ -58,8 +58,9 @@ export async function createAndLaunchAgent(
   });
 
   // Create symlink ~/.claude -> /workspace/data/.claude so session files persist to volume
+  // Also pre-create evidence directory so agent Bash commands don't fail on missing path
   await sandbox.commands.run(
-    "mkdir -p /workspace/data/.claude && " +
+    "mkdir -p /workspace/data/.claude /workspace/data/evidence && " +
     "cp -a /home/user/.claude/. /workspace/data/.claude/ && " +
     "rm -rf /home/user/.claude && " +
     "ln -sf /workspace/data/.claude /home/user/.claude"
