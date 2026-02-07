@@ -125,9 +125,13 @@
 벤치마크 실행 후 **matplotlib으로 차트까지 생성**하면 더 임팩트 있어:
 ```python
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rc('font', family='NanumGothic')  # 한글 폰트 설정 (필수!)
+matplotlib.rcParams['axes.unicode_minus'] = False
 # ... 벤치마크 결과 시각화
 plt.savefig('/workspace/data/evidence/benchmark_chart.png')
 ```
+**중요**: 차트에 한글을 쓸 때 반드시 `NanumGothic` 폰트를 설정해야 깨지지 않아!
 - `/workspace/data/evidence/`에 PNG로 저장
 - "데이터가 스스로 말하게 하죠" + 차트 파일 경로 제시
 

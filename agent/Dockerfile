@@ -1,10 +1,12 @@
 FROM node:20-bookworm
 
 # Install system dependencies (includes Python for benchmarks + charts)
+# fonts-nanum: Korean font for matplotlib chart rendering
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential curl git gh python3 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
+    build-essential curl git gh python3 python3-pip fonts-nanum && \
+    rm -rf /var/lib/apt/lists/* && \
+    fc-cache -fv
 
 # Install matplotlib for benchmark chart generation
 RUN pip3 install matplotlib --break-system-packages
