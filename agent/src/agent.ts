@@ -268,10 +268,64 @@ async function main() {
       return;
     }
 
-    const prompt = parseContent(sessionMsg);
-    if (!prompt) {
+    const rawPrompt = parseContent(sessionMsg);
+    if (!rawPrompt) {
       emit({ type: "process_error", message: "Empty prompt" });
       return;
+    }
+
+    // Build debate-aware prompt from environment variables
+    const debateTopic = process.env.DEBATE_TOPIC;
+    const userSide = process.env.DEBATE_USER_SIDE;
+    const agentSide = process.env.DEBATE_AGENT_SIDE;
+    const turnNumber = process.env.DEBATE_TURN;
+    const isVerdictMode = process.env.VERDICT_MODE === "true";
+
+    let prompt = rawPrompt;
+
+    if (debateTopic && agentSide) {
+      if (isVerdictMode) {
+        prompt = `[SYSTEM CONTEXT - 판결 모드]
+당신은 이제 이 토론의 재판장입니다. 토론 참가자가 아닙니다.
+토론 주제: "${debateTopic}"
+참가자 A (사용자): "${userSide}"
+참가자 B (당신이 이전에 맡았던): "${agentSide}"
+
+이 세션의 전체 토론 기록을 분석하세요. 다음을 평가하세요:
+1. 각 측의 기술적 논거 강도
+2. 근거와 실제 사례 활용도
+3. 논리적 일관성
+4. 상대방 반론에 대한 대응력
+
+반드시 /workspace/data/verdict.md에 판결문을 작성하세요:
+- 각 측의 핵심 주장 요약
+- 점수 (기술 깊이, 근거 품질, 설득력 - 각 10점 만점)
+- 최종 승자 선언과 그 이유
+- 기억에 남을 마무리 한마디
+
+한국어로 극적인 법정 판결 스타일로 선고하세요.
+
+사용자의 최종 변론: ${rawPrompt}`;
+      } else {
+        prompt = `[SYSTEM CONTEXT - 토론 모드]
+토론 주제: "${debateTopic}"
+당신의 입장: "${agentSide}" (반드시 이 입장만 수호하세요!)
+상대방 입장: "${userSide}"
+현재 라운드: ${turnNumber}
+
+중요 규칙:
+- 반드시 한국어(Korean)로만 응답하세요
+- "${agentSide}" 입장의 열정적 토론자로서 절대 캐릭터를 깨지 마세요
+- 절대 양보하거나 상대방 의견에 동조하지 마세요
+- 기술적 근거, 벤치마크, 실제 사례를 활용하세요
+- 상대방의 이전 주장을 직접 반박한 후 새로운 논점을 제시하세요
+- 도발적인 질문이나 도전으로 마무리하세요
+- 300-500자 분량으로 임팩트 있게 작성하세요
+${turnNumber === "1" ? "- 이것이 첫 번째 라운드입니다. 자신을 소개하고 강력한 오프닝 주장을 펼치세요!" : ""}
+
+상대방 주장: ${rawPrompt}`;
+      }
+      debug("Debate context applied", { debateTopic, agentSide, turnNumber, isVerdictMode });
     }
 
     let currentSessionId: string | undefined = sessionIdToResume;

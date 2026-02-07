@@ -1,6 +1,6 @@
 import Sandbox, { Volume } from "@moru-ai/core";
 
-const TEMPLATE_NAME = "moru-hackathon-agent";
+const TEMPLATE_NAME = "moru-hackathon-agent-toron";
 
 /**
  * Create a new volume for a conversation
@@ -31,11 +31,20 @@ export async function getVolume(volumeId: string) {
  * 3. All `commands.run()` calls are foreground (complete quickly, no streaming)
  * 4. The agent runs independently — no gRPC connection to maintain
  */
+export interface DebateContext {
+  debateTopic?: string;
+  userSide?: string;
+  agentSide?: string;
+  turnCount?: number;
+  isVerdictRequest?: boolean;
+}
+
 export async function createAndLaunchAgent(
   volumeId: string,
   conversationId: string,
   content: string,
-  sessionId?: string
+  sessionId?: string,
+  debateContext?: DebateContext
 ): Promise<{ sandboxId: string }> {
   const baseUrl = process.env.BASE_URL || "http://localhost:3000";
 
@@ -61,11 +70,16 @@ export async function createAndLaunchAgent(
     `printf '%s\\n%s\\n' '${processStart.replace(/'/g, "'\\''")}' '${sessionMessage.replace(/'/g, "'\\''")}' > /tmp/agent_input.txt`
   );
 
+  // Build debate environment variables
+  const debateEnvVars = debateContext
+    ? `DEBATE_TOPIC="${(debateContext.debateTopic || "").replace(/"/g, '\\"')}" DEBATE_USER_SIDE="${(debateContext.userSide || "").replace(/"/g, '\\"')}" DEBATE_AGENT_SIDE="${(debateContext.agentSide || "").replace(/"/g, '\\"')}" DEBATE_TURN="${debateContext.turnCount || 0}" VERDICT_MODE="${debateContext.isVerdictRequest ? "true" : ""}"`
+    : "";
+
   // Launch agent fully detached with nohup — no streaming connection maintained.
   // The agent reads from the input file, runs query(), and calls CALLBACK_URL when done.
   const callbackUrl = `${baseUrl}/api/conversations/${conversationId}/status`;
   await sandbox.commands.run(
-    `nohup bash -c 'cd /workspace/data && WORKSPACE_DIR=/workspace/data CALLBACK_URL="${callbackUrl}" RESUME_SESSION_ID="${sessionId || ""}" npx tsx /app/agent.mts < /tmp/agent_input.txt >> /tmp/agent_stdout.log 2>> /tmp/agent_stderr.log' &>/dev/null &`
+    `nohup bash -c 'cd /workspace/data && WORKSPACE_DIR=/workspace/data CALLBACK_URL="${callbackUrl}" RESUME_SESSION_ID="${sessionId || ""}" ${debateEnvVars} npx tsx /app/agent.mts < /tmp/agent_input.txt >> /tmp/agent_stdout.log 2>> /tmp/agent_stderr.log' &>/dev/null &`
   );
 
   return { sandboxId: sandbox.sandboxId };
