@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AlertTriangle, Loader2, PanelLeftClose, PanelLeft, X } from "lucide-react";
+import { AlertTriangle, Loader2, PanelLeftClose, PanelLeft, X, FileText, Scale } from "lucide-react";
 import type { FileInfo } from "@/lib/types";
 
 interface WorkspacePanelProps {
@@ -138,7 +138,10 @@ function WorkspacePanelComponent({
   // Helper for consistent header rendering
   const renderHeader = () => (
     <div className="flex items-center justify-between border-b border-border px-3 py-2 h-[52px]">
-      <span className="font-mono text-sm font-medium">Workspace</span>
+      <div className="flex items-center gap-1.5">
+        <Scale className="size-3.5 text-[var(--debate-gold)]" />
+        <span className="font-mono text-sm font-medium">증거 자료실</span>
+      </div>
       <div className="flex items-center gap-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -183,8 +186,10 @@ function WorkspacePanelComponent({
     return (
       <div className="flex h-full flex-col border-l border-border">
         {renderHeader()}
-        <div className="flex h-full items-center justify-center text-muted-foreground text-sm p-4 text-center">
-          Start a conversation to see workspace files
+        <div className="flex h-full flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center gap-2">
+          <FileText className="size-8 text-muted-foreground/30" />
+          <span>토론을 시작하면 증거 자료가 여기에 표시됩니다</span>
+          <span className="text-[10px] text-muted-foreground/40">벤치마크, 코드 실행 결과, 참고 문헌</span>
         </div>
       </div>
     );
