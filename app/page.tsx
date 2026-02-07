@@ -17,8 +17,9 @@ import { VSScreen } from "@/components/debate/vs-screen";
 import { CustomTopicModal } from "@/components/debate/custom-topic-modal";
 import { AudiencePanel } from "@/components/debate/audience-panel";
 import { ModeratorBriefing } from "@/components/debate/moderator-briefing";
+import { ModeratorIntervention } from "@/components/debate/moderator-intervention";
 import { DEBATE_TOPICS, type DebateTopic } from "@/lib/debate-topics";
-import type { SessionEntry, ConversationResponse, AudienceComment } from "@/lib/types";
+import type { SessionEntry, ConversationResponse, AudienceComment, Evidence } from "@/lib/types";
 import { PanelRight, Gavel, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 
@@ -48,7 +49,7 @@ export default function Home() {
   const [userSide, setUserSide] = useState<string | null>(null);
   const [agentSide, setAgentSide] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
-  const [maxTurns, setMaxTurns] = useState(3);
+  const [maxTurns, setMaxTurns] = useState(5);
   const [votes, setVotes] = useState<{ user: number; agent: number }>({
     user: 0,
     agent: 0,
@@ -56,6 +57,9 @@ export default function Home() {
   const [verdictRequested, setVerdictRequested] = useState(false);
   const [showCustomTopicModal, setShowCustomTopicModal] = useState(false);
   const [audienceComments, setAudienceComments] = useState<AudienceComment[]>([]);
+  const [interventionType, setInterventionType] = useState<"agent-struggling" | "user-hint" | null>(null);
+  const [showIntervention, setShowIntervention] = useState(false);
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
 
   // Track post-completion poll attempts to avoid infinite polling
   const postCompletionPollsRef = useRef(0);
@@ -76,12 +80,13 @@ export default function Home() {
   );
 
   // Check if a pending message has a matching user message in server data.
+  // Uses .includes() because server messages wrap raw user text in debate system context.
   const hasPendingMatch = useCallback(
     (pending: PendingMessage, serverMsgs: SessionEntry[]) => {
       return serverMsgs.some(
         (m) =>
           m.type === "user" &&
-          getUserMessageText(m.message.content) === pending.content
+          getUserMessageText(m.message.content).includes(pending.content)
       );
     },
     [getUserMessageText]
@@ -107,6 +112,7 @@ export default function Home() {
           const data: ConversationResponse = await response.json();
 
           setServerMessages(data.messages);
+          if (data.evidence) setEvidence(data.evidence);
 
           if (data.messages.length > 0) {
             setPendingMessages((prev) =>
@@ -150,7 +156,24 @@ export default function Home() {
     verdictRequested,
   ]);
 
-  // Compute combined messages
+  // Calculate intervention mode from votes + audience comments
+  useEffect(() => {
+    if (debatePhase !== "debating" || turnCount < 2) return;
+
+    const userComments = audienceComments.filter((c) => c.side === "user").length;
+    const agentComments = audienceComments.filter((c) => c.side === "agent").length;
+    const agentLosingScore = (votes.user - votes.agent) + (userComments - agentComments) * 0.5;
+
+    if (agentLosingScore >= 3 && interventionType !== "agent-struggling") {
+      setInterventionType("agent-struggling");
+      setShowIntervention(true);
+    } else if (agentLosingScore <= -3 && interventionType !== "user-hint") {
+      setInterventionType("user-hint");
+      setShowIntervention(true);
+    }
+  }, [votes, audienceComments, debatePhase, turnCount, interventionType]);
+
+  // Compute combined messages, sorted by timestamp for correct chronological order
   const messages: SessionEntry[] = [
     ...serverMessages,
     ...pendingMessages.map(
@@ -170,7 +193,7 @@ export default function Home() {
         },
       })
     ),
-  ];
+  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -474,7 +497,7 @@ export default function Home() {
                         className="mb-3 w-full flex items-center justify-center gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-2.5 text-sm font-mono font-semibold text-yellow-200 hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
                       >
                         <Gavel className="size-4" />
-                        판결 요청 (3라운드 완료)
+                        판결 요청 ({maxTurns}라운드 완료)
                       </button>
                     )}
                     {debatePhase !== "verdict" && (
@@ -497,6 +520,7 @@ export default function Home() {
             <ResizablePanel defaultSize={45} minSize={25}>
               <WorkspacePanel
                 conversationId={conversationId}
+                evidence={evidence}
                 refreshTrigger={refreshTrigger}
                 onClose={() => setShowWorkspace(false)}
               />
@@ -546,6 +570,15 @@ export default function Home() {
           userSide={userSide}
           agentSide={agentSide}
           onComplete={handleBriefingComplete}
+        />
+      )}
+
+      {/* Moderator Intervention */}
+      {showIntervention && interventionType && (
+        <ModeratorIntervention
+          type={interventionType}
+          topic={selectedTopic?.title}
+          onDismiss={() => setShowIntervention(false)}
         />
       )}
 

@@ -119,7 +119,7 @@ export default function DebatePage({
   const isLive = data.status === "running";
   const isCompleted = data.status === "completed" || data.status === "error";
   const hasVerdict =
-    isCompleted && data.turnCount !== undefined && data.turnCount > (data.maxTurns || 3);
+    isCompleted && data.turnCount !== undefined && data.turnCount > (data.maxTurns || 5);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -180,7 +180,7 @@ export default function DebatePage({
           userSide={data.userSide}
           agentSide={data.agentSide}
           turnCount={data.turnCount || 0}
-          maxTurns={data.maxTurns || 3}
+          maxTurns={data.maxTurns || 5}
           votes={data.votes}
           onVote={handleVote}
         />

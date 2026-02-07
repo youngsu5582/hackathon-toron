@@ -194,6 +194,7 @@ export interface ConversationResponse {
   id: string;
   status: "idle" | "running" | "completed" | "error";
   messages: SessionEntry[];
+  evidence?: Evidence[];
   errorMessage?: string;
   debateTopic?: string;
   userSide?: string;
@@ -231,4 +232,23 @@ export interface StatusCallbackRequest {
   status: "completed" | "error";
   errorMessage?: string;
   sessionId?: string;
+}
+
+// ============================================================================
+// Evidence Types (extracted from agent tool usage)
+// ============================================================================
+
+export type EvidenceType = "web-search" | "web-fetch" | "bash" | "code-write";
+
+export interface Evidence {
+  id: string;
+  type: EvidenceType;
+  title: string;
+  content: string;
+  url?: string;
+  query?: string;
+  command?: string;
+  filePath?: string;
+  isError?: boolean;
+  timestamp: string;
 }

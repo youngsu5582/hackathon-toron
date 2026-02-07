@@ -102,6 +102,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Calculate intervention mode based on votes + audience sentiment
+    let interventionMode: "losing" | "winning" | null = null;
+    if (conversationId && conversation.turnCount > 1) {
+      const [voteAgg, commentAgg] = await Promise.all([
+        prisma.vote.groupBy({
+          by: ["side"],
+          where: { conversationId: conversation.id },
+          _count: true,
+        }),
+        prisma.comment.groupBy({
+          by: ["side"],
+          where: { conversationId: conversation.id, side: { not: null } },
+          _count: true,
+        }),
+      ]);
+
+      const userVotes = voteAgg.find((v) => v.side === "user")?._count ?? 0;
+      const agentVotes = voteAgg.find((v) => v.side === "agent")?._count ?? 0;
+      const userComments = commentAgg.find((c) => c.side === "user")?._count ?? 0;
+      const agentComments = commentAgg.find((c) => c.side === "agent")?._count ?? 0;
+
+      // Positive = agent is losing, Negative = agent is winning
+      const agentLosingScore = (userVotes - agentVotes) + (userComments - agentComments) * 0.5;
+
+      if (agentLosingScore >= 3) {
+        interventionMode = "losing";
+      } else if (agentLosingScore <= -3) {
+        interventionMode = "winning";
+      }
+    }
+
     // Create sandbox and launch agent (fire-and-forget, no streaming connection)
     const { sandboxId } = await createAndLaunchAgent(
       volumeId,
@@ -114,6 +145,7 @@ export async function POST(request: NextRequest) {
         agentSide: conversation.agentSide || undefined,
         turnCount: conversation.turnCount,
         isVerdictRequest: isVerdictRequest || false,
+        interventionMode,
       }
     );
 

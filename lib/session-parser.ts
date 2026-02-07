@@ -1,4 +1,4 @@
-import { SessionEntry, AssistantMessage } from "./types";
+import { SessionEntry, AssistantMessage, UserMessage } from "./types";
 
 /**
  * Claude Code internal artifact texts that should not be shown to users.
@@ -28,6 +28,51 @@ function isInternalArtifact(entry: AssistantMessage): boolean {
 }
 
 /**
+ * Strip debate system context from user message content,
+ * keeping only the raw user text.
+ *
+ * Agent wraps user messages like:
+ *   "[SYSTEM CONTEXT - 토론 모드]\n...\n상대방 주장: {raw text}"
+ *   "[SYSTEM CONTEXT - 판결 모드 활성화]\n...\n사용자의 최종 변론: {raw text}"
+ */
+function stripDebateContext(text: string): string {
+  // Debate mode: extract after "상대방 주장: "
+  const debateMatch = text.match(/상대방 주장: ([\s\S]*)$/);
+  if (debateMatch) return debateMatch[1].trim();
+
+  // Verdict mode: extract after "사용자의 최종 변론: "
+  const verdictMatch = text.match(/사용자의 최종 변론: ([\s\S]*)$/);
+  if (verdictMatch) return verdictMatch[1].trim();
+
+  return text;
+}
+
+/**
+ * Clean user message content by stripping debate system context.
+ */
+function cleanUserMessageContent(entry: UserMessage): void {
+  const content = entry.message.content;
+  if (typeof content === "string") {
+    if (content.includes("[SYSTEM CONTEXT")) {
+      entry.message.content = stripDebateContext(content);
+    }
+  } else if (Array.isArray(content)) {
+    for (const block of content) {
+      if (
+        "type" in block &&
+        block.type === "text" &&
+        "text" in block
+      ) {
+        const textBlock = block as { type: "text"; text: string };
+        if (textBlock.text.includes("[SYSTEM CONTEXT")) {
+          textBlock.text = stripDebateContext(textBlock.text);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Parse Claude Code session JSONL file into session entries
  */
 export function parseSessionJSONL(content: string): SessionEntry[] {
@@ -49,6 +94,10 @@ export function parseSessionJSONL(content: string): SessionEntry[] {
         // Filter out Claude Code internal artifacts
         if (entry.type === "assistant" && isInternalArtifact(entry as AssistantMessage)) {
           continue;
+        }
+        // Strip debate system context from user messages
+        if (entry.type === "user") {
+          cleanUserMessageContent(entry as UserMessage);
         }
         entries.push(entry as SessionEntry);
       }

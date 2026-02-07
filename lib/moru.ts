@@ -37,6 +37,7 @@ export interface DebateContext {
   agentSide?: string;
   turnCount?: number;
   isVerdictRequest?: boolean;
+  interventionMode?: "losing" | "winning" | null;
 }
 
 export async function createAndLaunchAgent(
@@ -72,15 +73,21 @@ export async function createAndLaunchAgent(
 
   // Build debate environment variables
   const debateEnvVars = debateContext
-    ? `DEBATE_TOPIC="${(debateContext.debateTopic || "").replace(/"/g, '\\"')}" DEBATE_USER_SIDE="${(debateContext.userSide || "").replace(/"/g, '\\"')}" DEBATE_AGENT_SIDE="${(debateContext.agentSide || "").replace(/"/g, '\\"')}" DEBATE_TURN="${debateContext.turnCount || 0}" VERDICT_MODE="${debateContext.isVerdictRequest ? "true" : ""}"`
+    ? `DEBATE_TOPIC="${(debateContext.debateTopic || "").replace(/"/g, '\\"')}" DEBATE_USER_SIDE="${(debateContext.userSide || "").replace(/"/g, '\\"')}" DEBATE_AGENT_SIDE="${(debateContext.agentSide || "").replace(/"/g, '\\"')}" DEBATE_TURN="${debateContext.turnCount || 0}" VERDICT_MODE="${debateContext.isVerdictRequest ? "true" : ""}" INTERVENTION_MODE="${debateContext.interventionMode || ""}"`
     : "";
+
+  // External API keys passthrough (for image generation, etc.)
+  const externalApiVars = [
+    process.env.GEMINI_API_KEY ? `GEMINI_API_KEY="${process.env.GEMINI_API_KEY}"` : "",
+    process.env.EXTERNAL_IMAGE_API_KEY ? `EXTERNAL_IMAGE_API_KEY="${process.env.EXTERNAL_IMAGE_API_KEY}"` : "",
+  ].filter(Boolean).join(" ");
 
   // Launch agent fully detached with nohup — no streaming connection maintained.
   // The agent reads from the input file, runs query(), and calls CALLBACK_URL when done.
   const callbackUrl = `${baseUrl}/api/conversations/${conversationId}/status`;
   const anthropicKey = process.env.ANTHROPIC_API_KEY || "";
   await sandbox.commands.run(
-    `nohup bash -c 'cd /workspace/data && WORKSPACE_DIR=/workspace/data ANTHROPIC_API_KEY="${anthropicKey}" CALLBACK_URL="${callbackUrl}" RESUME_SESSION_ID="${sessionId || ""}" ${debateEnvVars} npx tsx /app/agent.mts < /tmp/agent_input.txt >> /tmp/agent_stdout.log 2>> /tmp/agent_stderr.log' &>/dev/null &`
+    `nohup bash -c 'cd /workspace/data && WORKSPACE_DIR=/workspace/data ANTHROPIC_API_KEY="${anthropicKey}" CALLBACK_URL="${callbackUrl}" RESUME_SESSION_ID="${sessionId || ""}" ${debateEnvVars} ${externalApiVars} npx tsx /app/agent.mts < /tmp/agent_input.txt >> /tmp/agent_stdout.log 2>> /tmp/agent_stderr.log' &>/dev/null &`
   );
 
   return { sandboxId: sandbox.sandboxId };

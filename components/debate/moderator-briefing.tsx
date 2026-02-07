@@ -77,7 +77,7 @@ export function ModeratorBriefing({
         {/* Rules reminder */}
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-muted/20 px-2 py-2">
-            <div className="text-lg mb-1">3</div>
+            <div className="text-lg mb-1">5</div>
             <div className="font-mono text-[10px] text-muted-foreground/60">
               라운드
             </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { readVolumeFile } from "@/lib/moru";
 import { parseSessionJSONL, getSessionFilePath } from "@/lib/session-parser";
+import { extractEvidence } from "@/lib/evidence-parser";
 import type { ConversationResponse } from "@/lib/types";
 
 /**
@@ -78,6 +79,7 @@ export async function GET(
         const sessionPath = getSessionFilePath(conversation.sessionId);
         const content = await readVolumeFile(conversation.volumeId, sessionPath);
         response.messages = parseSessionJSONL(content);
+        response.evidence = extractEvidence(response.messages);
       } catch (error) {
         // Session file doesn't exist yet or can't be read - return empty
         // The client will show pending messages until real messages arrive

@@ -18,7 +18,7 @@ model Conversation {
   userSide     String?                   // e.g. "정규화 찬성"
   agentSide    String?                   // e.g. "역정규화 찬성"
   turnCount    Int       @default(0)     // Current debate turn
-  maxTurns     Int       @default(3)     // Turns before verdict is available
+  maxTurns     Int       @default(5)     // Turns before verdict is available
   votes        Vote[]
   comments     Comment[]
   createdAt    DateTime  @default(now())
