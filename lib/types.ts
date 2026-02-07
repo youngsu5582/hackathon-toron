@@ -179,6 +179,17 @@ export interface DebateMetadata {
   topic: string;
   userSide: string;
   agentSide: string;
+  debateMode?: "user-vs-ai" | "ai-vs-ai";
+}
+
+export interface DebateTurnData {
+  id: string;
+  turnNumber: number;
+  side: string;
+  sideLabel: string;
+  persona: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface AudienceComment {
@@ -203,6 +214,10 @@ export interface ConversationResponse {
   maxTurns?: number;
   votes?: { user: number; agent: number };
   comments?: AudienceComment[];
+  debateMode?: "user-vs-ai" | "ai-vs-ai";
+  currentSide?: string;
+  turns?: DebateTurnData[];
+  userVerdict?: string;
 }
 
 export interface SendMessageRequest {

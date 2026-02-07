@@ -85,7 +85,7 @@ export function ModeratorIntervention({
               중재자 알림
             </div>
             <div className="text-sm text-muted-foreground">
-              테크 어쌔신이 고전 중! 전략 수정 중...
+              AI가 고전 중! 전략 수정 중...
             </div>
           </div>
         </div>

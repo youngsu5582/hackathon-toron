@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Conversation {
@@ -19,10 +20,26 @@ model Conversation {
   agentSide    String?                   // e.g. "역정규화 찬성"
   turnCount    Int       @default(0)     // Current debate turn
   maxTurns     Int       @default(5)     // Turns before verdict is available
+  debateMode   String    @default("user-vs-ai") // "user-vs-ai" | "ai-vs-ai"
+  currentSide  String?                   // "sideA" | "sideB" — AI vs AI에서 현재 차례
+  userVerdict  String?   @db.Text        // User-written verdict (AI vs AI mode)
   votes        Vote[]
   comments     Comment[]
+  turns        DebateTurn[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+model DebateTurn {
+  id             String       @id @default(cuid())
+  conversationId String
+  turnNumber     Int
+  side           String       // "sideA" | "sideB"
+  sideLabel      String       // "정규화 찬성"
+  persona        String       // "알파" | "오메가"
+  content        String       @db.Text
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt      DateTime     @default(now())
 }
 
 model Vote {

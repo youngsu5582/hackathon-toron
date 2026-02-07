@@ -71,7 +71,27 @@ export async function GET(
         ...c,
         createdAt: c.createdAt.toISOString(),
       })),
+      debateMode: conversation.debateMode as ConversationResponse["debateMode"],
+      currentSide: conversation.currentSide || undefined,
+      userVerdict: conversation.userVerdict || undefined,
     };
+
+    // For AI vs AI mode, fetch debate turns
+    if (conversation.debateMode === "ai-vs-ai") {
+      const turns = await prisma.debateTurn.findMany({
+        where: { conversationId: id },
+        orderBy: { turnNumber: "asc" },
+      });
+      response.turns = turns.map((t) => ({
+        id: t.id,
+        turnNumber: t.turnNumber,
+        side: t.side,
+        sideLabel: t.sideLabel,
+        persona: t.persona,
+        content: t.content,
+        createdAt: t.createdAt.toISOString(),
+      }));
+    }
 
     // If we have a sessionId and volumeId, try to read the session file
     if (conversation.sessionId && conversation.volumeId) {

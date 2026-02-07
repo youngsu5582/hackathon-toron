@@ -14,47 +14,52 @@ export function TopicCard({ topic, onClick, index }: TopicCardProps) {
     <button
       onClick={onClick}
       className={cn(
-        "group relative text-left rounded-xl border border-border/60 p-5",
-        "bg-card/80 backdrop-blur-sm",
-        "hover:bg-card hover:border-[var(--debate-blue)]/30",
+        "group relative text-left rounded-2xl p-6 overflow-hidden",
+        "bg-card/40 backdrop-blur-sm",
+        "border border-border/40",
+        "hover:bg-card/70 hover:border-[var(--debate-gold)]/30",
         "transition-all duration-300 ease-out",
-        "hover:-translate-y-1 active:translate-y-0",
-        "topic-card-glow",
-        "focus:outline-none focus:ring-2 focus:ring-[var(--debate-blue)]/50",
+        "hover:-translate-y-1.5 hover:shadow-xl hover:shadow-[var(--debate-gold)]/5",
+        "active:translate-y-0 active:shadow-none",
+        "focus:outline-none focus:ring-2 focus:ring-[var(--debate-gold)]/40",
         "animate-fade-in-up"
       )}
       style={{ animationDelay: `${index * 80}ms` }}
       aria-label={`토론 주제 선택: ${topic.title}`}
     >
-      {/* Emoji pair */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-3xl group-hover:scale-110 transition-transform duration-300">
-          {topic.sideA.emoji}
-        </span>
-        <span className="text-[10px] text-muted-foreground/50 font-mono font-bold tracking-widest">
-          VS
-        </span>
-        <span className="text-3xl group-hover:scale-110 transition-transform duration-300">
-          {topic.sideB.emoji}
-        </span>
-      </div>
+      {/* Subtle gradient overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[var(--debate-gold)]/0 via-transparent to-[var(--debate-gold)]/0 group-hover:from-[var(--debate-gold)]/[0.03] group-hover:to-[var(--debate-gold)]/[0.06] transition-all duration-500 rounded-2xl" />
 
-      {/* Title */}
-      <h3 className="font-mono text-sm font-semibold mb-1.5 group-hover:text-[var(--debate-blue)] transition-colors duration-300">
-        {topic.title}
-      </h3>
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Emoji pair */}
+        <div className="flex items-center gap-3 mb-5">
+          <span className="text-4xl group-hover:scale-110 transition-transform duration-300">
+            {topic.sideA.emoji}
+          </span>
+          <span className="text-xs text-[var(--debate-gold)]/40 font-mono font-black tracking-[0.2em] group-hover:text-[var(--debate-gold)]/60 transition-colors duration-300">
+            VS
+          </span>
+          <span className="text-4xl group-hover:scale-110 transition-transform duration-300">
+            {topic.sideB.emoji}
+          </span>
+        </div>
 
-      {/* Description */}
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        {topic.description}
-      </p>
+        {/* Title */}
+        <h3 className="font-mono text-base font-bold mb-2.5 text-foreground/90 group-hover:text-[var(--debate-gold)] transition-colors duration-300">
+          {topic.title}
+        </h3>
 
-      {/* CTA */}
-      <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground/40 group-hover:text-[var(--debate-blue)]/70 transition-all duration-300">
-        <span>토론 입장</span>
-        <span className="group-hover:translate-x-0.5 transition-transform duration-300">
-          &rarr;
-        </span>
+        {/* Description */}
+        <p className="text-sm text-muted-foreground/60 leading-relaxed line-clamp-2">
+          {topic.description}
+        </p>
+
+        {/* CTA */}
+        <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground/25 group-hover:text-[var(--debate-gold)]/60 transition-all duration-300">
+          <span className="font-mono text-xs">토론 입장</span>
+          <span className="group-hover:translate-x-1.5 transition-transform duration-300">&rarr;</span>
+        </div>
       </div>
     </button>
   );

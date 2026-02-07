@@ -18,8 +18,10 @@ import { CustomTopicModal } from "@/components/debate/custom-topic-modal";
 import { AudiencePanel } from "@/components/debate/audience-panel";
 import { ModeratorBriefing } from "@/components/debate/moderator-briefing";
 import { ModeratorIntervention } from "@/components/debate/moderator-intervention";
+import { AiBattleView } from "@/components/debate/ai-battle-view";
+import { UserVerdictForm } from "@/components/debate/user-verdict-form";
 import { DEBATE_TOPICS, type DebateTopic } from "@/lib/debate-topics";
-import type { SessionEntry, ConversationResponse, AudienceComment, Evidence } from "@/lib/types";
+import type { SessionEntry, ConversationResponse, AudienceComment, Evidence, DebateTurnData } from "@/lib/types";
 import { PanelRight, Gavel, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 
@@ -30,7 +32,7 @@ interface PendingMessage {
   timestamp: string;
 }
 
-type DebatePhase = "topic-select" | "side-select" | "vs-intro" | "briefing" | "debating" | "verdict";
+type DebatePhase = "topic-select" | "side-select" | "vs-intro" | "briefing" | "debating" | "verdict" | "ai-battle" | "user-verdict";
 
 export default function Home() {
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -60,6 +62,9 @@ export default function Home() {
   const [interventionType, setInterventionType] = useState<"agent-struggling" | "user-hint" | null>(null);
   const [showIntervention, setShowIntervention] = useState(false);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [debateMode, setDebateMode] = useState<"user-vs-ai" | "ai-vs-ai">("user-vs-ai");
+  const [aiTurns, setAiTurns] = useState<DebateTurnData[]>([]);
+  const [currentSide, setCurrentSide] = useState<string | undefined>();
 
   // Track post-completion poll attempts to avoid infinite polling
   const postCompletionPollsRef = useRef(0);
@@ -98,8 +103,13 @@ export default function Home() {
 
     const isDone = status === "completed" || status === "error";
 
+    // For AI vs AI battle: keep polling even if "completed" because the
+    // status endpoint may chain back to "running" for the next turn.
+    const isAiBattleInProgress = debatePhase === "ai-battle";
+
     if (
       isDone &&
+      !isAiBattleInProgress &&
       (pendingMessages.length === 0 || postCompletionPollsRef.current >= 10)
     )
       return;
@@ -134,12 +144,22 @@ export default function Home() {
           if (data.votes) setVotes(data.votes);
           if (data.comments) setAudienceComments(data.comments);
 
-          // Detect verdict completion
-          if (
-            verdictRequested &&
-            (data.status === "completed" || data.status === "error")
-          ) {
-            setDebatePhase("verdict");
+          // Sync AI vs AI data
+          if (data.debateMode) setDebateMode(data.debateMode);
+          if (data.currentSide) setCurrentSide(data.currentSide);
+          if (data.turns) setAiTurns(data.turns);
+
+          // Detect completion
+          if (data.status === "completed" || data.status === "error") {
+            if (data.debateMode === "ai-vs-ai") {
+              // AI vs AI: show user verdict form only when ALL turns are done
+              const allTurnsDone = (data.turnCount || 0) >= (data.maxTurns || 5);
+              if (debatePhase === "ai-battle" && !data.userVerdict && allTurnsDone) {
+                setDebatePhase("user-verdict");
+              }
+            } else if (verdictRequested) {
+              setDebatePhase("verdict");
+            }
           }
         }
       } catch (error) {
@@ -154,6 +174,7 @@ export default function Home() {
     pendingMessages.length,
     hasPendingMatch,
     verdictRequested,
+    debatePhase,
   ]);
 
   // Calculate intervention mode from votes + audience comments
@@ -229,6 +250,7 @@ export default function Home() {
                     topic: selectedTopic.title,
                     userSide,
                     agentSide,
+                    debateMode,
                   },
                 }
               : {}),
@@ -257,8 +279,15 @@ export default function Home() {
 
   const handleTopicSelect = useCallback((topic: DebateTopic) => {
     setSelectedTopic(topic);
-    setDebatePhase("side-select");
-  }, []);
+    if (debateMode === "ai-vs-ai") {
+      // AI vs AI: auto-assign sides, skip side selection
+      setUserSide(topic.sideA.label);
+      setAgentSide(topic.sideB.label);
+      setDebatePhase("vs-intro");
+    } else {
+      setDebatePhase("side-select");
+    }
+  }, [debateMode]);
 
   const handleSideSelect = useCallback(
     (selectedUserSide: string, selectedAgentSide: string) => {
@@ -269,10 +298,10 @@ export default function Home() {
     []
   );
 
-  const handleVSComplete = useCallback(() => {
-    // If topic has a briefing, show it; otherwise go straight to debating
-    if (selectedTopic?.briefing) {
-      setDebatePhase("briefing");
+  const startDebate = useCallback(() => {
+    if (debateMode === "ai-vs-ai") {
+      setDebatePhase("ai-battle");
+      handleSubmit("토론을 시작합니다. 첫 번째 주장을 펼쳐주세요.");
     } else {
       setDebatePhase("debating");
       if (userSide) {
@@ -281,16 +310,19 @@ export default function Home() {
         );
       }
     }
-  }, [handleSubmit, userSide, selectedTopic]);
+  }, [debateMode, handleSubmit, userSide]);
+
+  const handleVSComplete = useCallback(() => {
+    if (selectedTopic?.briefing) {
+      setDebatePhase("briefing");
+    } else {
+      startDebate();
+    }
+  }, [startDebate, selectedTopic]);
 
   const handleBriefingComplete = useCallback(() => {
-    setDebatePhase("debating");
-    if (userSide) {
-      handleSubmit(
-        `나는 "${userSide}" 입장을 지지합니다. 당신의 첫 번째 주장을 펼쳐보세요!`
-      );
-    }
-  }, [handleSubmit, userSide]);
+    startDebate();
+  }, [startDebate]);
 
   const handleCustomTopicSubmit = useCallback(
     (topic: DebateTopic) => {
@@ -333,18 +365,19 @@ export default function Home() {
   );
 
   const isLoading = status === "running" || isSubmitting;
-  const hasMessages = messages.length > 0;
+  const isAiVsAi = debateMode === "ai-vs-ai";
+  const hasMessages = messages.length > 0 || aiTurns.length > 0;
   const canRequestVerdict =
     turnCount >= maxTurns && !verdictRequested && debatePhase === "debating";
 
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-border px-4 h-[52px]">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">&#9878;</span>
-          <span className="font-mono text-sm font-medium">
-            기술 맞짱: 아키텍처 법정
+      <header className="flex items-center justify-between border-b border-border/40 px-5 h-[56px] bg-background/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="flex items-center gap-2.5">
+          <span className="text-lg" style={{ animation: 'float-subtle 3s ease-in-out infinite' }}>&#9878;</span>
+          <span className="font-mono text-sm font-black tracking-wider text-gradient-gold">
+            Toron
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -353,13 +386,13 @@ export default function Home() {
             debatePhase !== "vs-intro" &&
             debatePhase !== "briefing" &&
             selectedTopic && (
-              <span className="text-xs text-muted-foreground font-mono">
-                {selectedTopic.title}
+              <span className="text-xs text-muted-foreground/70 font-mono px-2.5 py-1 rounded-full bg-muted/30 border border-border/30">
+                {isAiVsAi ? `AI vs AI | ${selectedTopic.title}` : selectedTopic.title}
               </span>
             )}
           <Link
             href="/gallery"
-            className="p-1.5 hover:bg-muted rounded transition-colors"
+            className="p-2 hover:bg-muted/50 rounded-lg transition-all duration-200 hover:scale-105"
             title="토론 갤러리"
           >
             <LayoutGrid className="size-4 text-muted-foreground" />
@@ -367,7 +400,7 @@ export default function Home() {
           {!showWorkspace && hasMessages && (
             <button
               onClick={() => setShowWorkspace(true)}
-              className="p-1.5 hover:bg-muted rounded transition-colors"
+              className="p-2 hover:bg-muted/50 rounded-lg transition-all duration-200 hover:scale-105"
               title="Open workspace"
             >
               <PanelRight className="size-4 text-muted-foreground" />
@@ -384,15 +417,15 @@ export default function Home() {
           minSize={40}
         >
           <div className="flex h-full flex-col">
-            {/* Debate header bar (during debate) */}
-            {debatePhase === "debating" &&
+            {/* Debate header bar (during debate or AI battle) */}
+            {(debatePhase === "debating" || debatePhase === "ai-battle" || debatePhase === "user-verdict") &&
               userSide &&
               agentSide &&
               selectedTopic && (
                 <DebateHeader
                   topic={selectedTopic.title}
-                  userSide={userSide}
-                  agentSide={agentSide}
+                  userSide={isAiVsAi ? `\u26A1 알파 (${userSide})` : userSide}
+                  agentSide={isAiVsAi ? `\uD83D\uDD25 오메가 (${agentSide})` : agentSide}
                   turnCount={turnCount}
                   maxTurns={maxTurns}
                   votes={votes}
@@ -409,15 +442,50 @@ export default function Home() {
             <div className="flex-1 overflow-auto">
               {debatePhase === "topic-select" ? (
                 // Topic selection screen
-                <div className="flex h-full flex-col items-center justify-center px-4">
-                  <div className="text-4xl mb-3">&#9878;</div>
-                  <h1 className="font-mono text-xl font-bold mb-1">
-                    기술 맞짱
-                  </h1>
-                  <p className="text-sm text-muted-foreground mb-8">
-                    아키텍처 법정에 오신 것을 환영합니다. 주제를 선택하세요.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl w-full">
+                <div className="flex h-full flex-col items-center justify-center px-6 py-12 hero-gradient relative">
+                  {/* Hero section */}
+                  <div className="text-center mb-14 animate-fade-in-up relative">
+                    <div className="relative inline-block">
+                      <div className="absolute -inset-6 rounded-full bg-[var(--debate-gold)]/10 blur-2xl" />
+                      <div className="text-7xl mb-6 relative animate-float-subtle">&#9878;</div>
+                    </div>
+                    <h1 className="font-mono text-5xl sm:text-6xl font-black tracking-tight mb-4">
+                      <span className="text-gradient-gold">Toron</span>
+                    </h1>
+                    <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                      {isAiVsAi ? "두 AI가 격돌하는 토론을 관전하세요." : "AI와 치열한 토론을 벌여보세요."}
+                    </p>
+                    <p className="text-sm text-muted-foreground/40 mt-2">
+                      주제를 선택하면 토론이 시작됩니다.
+                    </p>
+
+                    {/* Mode toggle */}
+                    <div className="inline-flex items-center gap-1 mt-8 rounded-full border border-border/40 p-1 bg-card/40 backdrop-blur-sm">
+                      <button
+                        onClick={() => setDebateMode("user-vs-ai")}
+                        className={`px-5 py-2 rounded-full font-mono text-xs transition-all duration-300 ${
+                          debateMode === "user-vs-ai"
+                            ? "bg-[var(--debate-gold)]/15 text-[var(--debate-gold)] font-bold shadow-sm shadow-[var(--debate-gold)]/10"
+                            : "text-muted-foreground/50 hover:text-muted-foreground/80"
+                        }`}
+                      >
+                        직접 토론
+                      </button>
+                      <button
+                        onClick={() => setDebateMode("ai-vs-ai")}
+                        className={`px-5 py-2 rounded-full font-mono text-xs transition-all duration-300 ${
+                          debateMode === "ai-vs-ai"
+                            ? "bg-[var(--debate-gold)]/15 text-[var(--debate-gold)] font-bold shadow-sm shadow-[var(--debate-gold)]/10"
+                            : "text-muted-foreground/50 hover:text-muted-foreground/80"
+                        }`}
+                      >
+                        AI 배틀 관전
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Topic grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl w-full">
                     {DEBATE_TOPICS.map((topic, i) => (
                       <TopicCard
                         key={topic.id}
@@ -429,18 +497,18 @@ export default function Home() {
                     {/* Custom topic card */}
                     <button
                       onClick={() => setShowCustomTopicModal(true)}
-                      className="group rounded-xl border border-dashed border-[var(--debate-gold)]/25 bg-card/30 p-5 text-left transition-all duration-200 hover:border-[var(--debate-gold)]/50 hover:bg-[var(--debate-gold)]/5 active:scale-[0.98] animate-fade-in-up"
+                      className="group rounded-2xl border-2 border-dashed border-[var(--debate-gold)]/20 bg-card/20 p-6 text-left transition-all duration-300 hover:border-[var(--debate-gold)]/50 hover:bg-[var(--debate-gold)]/5 hover:-translate-y-1 active:translate-y-0 animate-fade-in-up"
                       style={{ animationDelay: `${DEBATE_TOPICS.length * 80}ms` }}
                     >
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-2xl group-hover:scale-110 transition-transform duration-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-3xl group-hover:scale-110 group-hover:rotate-90 transition-all duration-300">
                           &#10133;
                         </span>
                       </div>
-                      <h3 className="font-mono text-sm font-semibold mb-1 text-[var(--debate-gold)]">
+                      <h3 className="font-mono text-base font-bold mb-1.5 text-[var(--debate-gold)] group-hover:text-[var(--debate-gold)]">
                         직접 만들기
                       </h3>
-                      <p className="text-xs text-muted-foreground/60 leading-relaxed">
+                      <p className="text-sm text-muted-foreground/50 leading-relaxed">
                         나만의 토론 주제를 설정하세요
                       </p>
                     </button>
@@ -455,6 +523,20 @@ export default function Home() {
                     onClose={() => setDebatePhase("topic-select")}
                   />
                 </div>
+              ) : debatePhase === "ai-battle" && userSide && agentSide ? (
+                <AiBattleView
+                  turns={aiTurns}
+                  isRunning={status === "running"}
+                  currentSide={currentSide}
+                  sideALabel={userSide}
+                  sideBLabel={agentSide}
+                />
+              ) : debatePhase === "user-verdict" && conversationId && userSide && agentSide ? (
+                <UserVerdictForm
+                  conversationId={conversationId}
+                  sideALabel={userSide}
+                  sideBLabel={agentSide}
+                />
               ) : hasMessages ? (
                 <div className="max-w-3xl mx-auto px-4 py-6">
                   <CCMessages entries={messages} />
@@ -485,8 +567,9 @@ export default function Home() {
               </div>
             )}
 
-            {/* Bottom bar: prompt form + verdict button */}
+            {/* Bottom bar: prompt form + verdict button (only for user-vs-ai) */}
             {(debatePhase === "debating" || debatePhase === "verdict") &&
+              !isAiVsAi &&
               hasMessages && (
                 <div className="border-t border-border p-4">
                   <div className="max-w-3xl mx-auto">
@@ -530,14 +613,14 @@ export default function Home() {
       </ResizablePanelGroup>
 
       {/* Audience Panel */}
-      {(debatePhase === "debating" || debatePhase === "verdict") &&
+      {(debatePhase === "debating" || debatePhase === "verdict" || debatePhase === "ai-battle" || debatePhase === "user-verdict") &&
         conversationId &&
         userSide &&
         agentSide && (
           <AudiencePanel
             conversationId={conversationId}
-            userSide={userSide}
-            agentSide={agentSide}
+            userSide={isAiVsAi ? `\u26A1 알파` : userSide}
+            agentSide={isAiVsAi ? `\uD83D\uDD25 오메가` : agentSide}
             comments={audienceComments}
             onCommentAdded={() => setRefreshTrigger((prev) => prev + 1)}
           />

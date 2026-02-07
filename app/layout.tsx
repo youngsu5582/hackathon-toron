@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "기술 맞짱: 아키텍처 법정",
-  description: "AI와 기술 토론을 벌여보세요!",
+  title: "Toron - AI 토론 아레나",
+  description: "AI와 치열한 토론을 벌여보세요!",
 };
 
 export default function RootLayout({

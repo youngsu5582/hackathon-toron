@@ -49,12 +49,12 @@ export function VSScreen({
     <div
       className={cn(
         "fixed inset-0 z-[60] flex items-center justify-center overflow-hidden",
-        "bg-black/95 backdrop-blur-sm",
+        "bg-black/95 backdrop-blur-md",
         phase === "exit" && "animate-vs-exit"
       )}
     >
       {/* Radial glow background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,oklch(0.3_0.05_250/0.3)_0%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,oklch(0.3_0.05_80/0.2)_0%,transparent_60%)]" />
 
       {/* Spark lines */}
       {phase !== "enter" && (
@@ -78,8 +78,8 @@ export function VSScreen({
         <div className="relative">
           <div
             className={cn(
-              "absolute -inset-8 rounded-full blur-3xl transition-opacity duration-700",
-              "bg-[var(--debate-blue)]/20",
+              "absolute -inset-10 rounded-full blur-3xl transition-opacity duration-700",
+              "bg-[var(--debate-blue)]/15",
               phase === "enter" ? "opacity-0" : "opacity-100"
             )}
           />
@@ -90,8 +90,8 @@ export function VSScreen({
         <div className="mt-6 font-mono text-lg sm:text-xl font-bold text-[var(--debate-blue)] relative z-10">
           {userSide}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground/60 font-mono">
-          CHALLENGER
+        <div className="mt-1.5 text-[10px] text-[var(--debate-blue)]/40 font-mono tracking-[0.3em] uppercase">
+          Challenger
         </div>
       </div>
 
@@ -108,8 +108,8 @@ export function VSScreen({
         <div className="relative">
           <div
             className={cn(
-              "absolute -inset-8 rounded-full blur-3xl transition-opacity duration-700",
-              "bg-[var(--debate-red)]/20",
+              "absolute -inset-10 rounded-full blur-3xl transition-opacity duration-700",
+              "bg-[var(--debate-red)]/15",
               phase === "enter" ? "opacity-0" : "opacity-100"
             )}
           />
@@ -120,8 +120,8 @@ export function VSScreen({
         <div className="mt-6 font-mono text-lg sm:text-xl font-bold text-[var(--debate-red)] relative z-10">
           {agentSide}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground/60 font-mono">
-          TECH ASSASSIN
+        <div className="mt-1.5 text-[10px] text-[var(--debate-red)]/40 font-mono tracking-[0.3em] uppercase">
+          Opponent
         </div>
       </div>
 
@@ -129,7 +129,7 @@ export function VSScreen({
       <div
         className={cn(
           "absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2",
-          "bg-gradient-to-b from-transparent via-white/20 to-transparent",
+          "bg-gradient-to-b from-transparent via-white/10 to-transparent",
           "transition-opacity duration-300",
           phase === "enter" ? "opacity-0" : "opacity-100"
         )}
@@ -140,7 +140,7 @@ export function VSScreen({
         <div className="relative z-20 flex flex-col items-center">
           <div className="animate-vs-impact">
             <div className="relative">
-              <div className="absolute -inset-4 rounded-full bg-[var(--debate-gold)]/20 blur-xl animate-pulse" />
+              <div className="absolute -inset-6 rounded-full bg-[var(--debate-gold)]/15 blur-2xl animate-pulse" />
               <span className="font-mono text-5xl sm:text-7xl font-black text-[var(--debate-gold)] relative z-10 vs-text-shadow">
                 VS
               </span>
@@ -150,7 +150,7 @@ export function VSScreen({
           {/* Countdown */}
           {phase === "countdown" && (
             <div className="mt-6 animate-vs-countdown" key={count}>
-              <span className="font-mono text-3xl font-bold text-white/80">
+              <span className="font-mono text-3xl font-bold text-white/70">
                 {count}
               </span>
             </div>
@@ -168,8 +168,8 @@ export function VSScreen({
             : "opacity-100 translate-y-0"
         )}
       >
-        <span className="font-mono text-xs text-muted-foreground/40 tracking-widest uppercase">
-          Architecture Court
+        <span className="font-mono text-[10px] text-[var(--debate-gold)]/30 tracking-[0.3em] uppercase">
+          Toron Arena
         </span>
       </div>
     </div>

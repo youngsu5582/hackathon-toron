@@ -225,6 +225,74 @@ body,
     0 4px 20px oklch(0.5 0.08 250 / 0.1);
 }
 
+/* Subtle mesh gradient background for hero */
+.hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.75 0.12 80 / 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 50%, oklch(0.65 0.15 250 / 0.05), transparent),
+    radial-gradient(ellipse 60% 40% at 20% 50%, oklch(0.65 0.15 25 / 0.05), transparent);
+}
+
+/* Floating particles keyframe */
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float-subtle {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+/* Gradient text */
+.text-gradient-gold {
+  background: linear-gradient(135deg, oklch(0.75 0.12 80), oklch(0.85 0.10 60));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: oklch(0.24 0 0 / 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid oklch(1 0 0 / 0.06);
+}
+
+/* Subtle border glow on hover */
+.border-glow-gold:hover {
+  box-shadow:
+    0 0 0 1px oklch(0.75 0.12 80 / 0.2),
+    0 8px 32px oklch(0.75 0.12 80 / 0.08),
+    0 2px 8px oklch(0 0 0 / 0.3);
+}
+
+/* Noise texture overlay */
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Pulsing dot */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
 /* Vote bar gradient */
 .vote-bar-blue {
   background: linear-gradient(90deg, oklch(0.55 0.15 250), oklch(0.65 0.15 250));

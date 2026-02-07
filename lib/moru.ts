@@ -38,6 +38,8 @@ export interface DebateContext {
   turnCount?: number;
   isVerdictRequest?: boolean;
   interventionMode?: "losing" | "winning" | null;
+  agentRole?: "agent-a" | "agent-b";
+  aiVsAiMode?: boolean;
 }
 
 export async function createAndLaunchAgent(
@@ -73,7 +75,7 @@ export async function createAndLaunchAgent(
 
   // Build debate environment variables
   const debateEnvVars = debateContext
-    ? `DEBATE_TOPIC="${(debateContext.debateTopic || "").replace(/"/g, '\\"')}" DEBATE_USER_SIDE="${(debateContext.userSide || "").replace(/"/g, '\\"')}" DEBATE_AGENT_SIDE="${(debateContext.agentSide || "").replace(/"/g, '\\"')}" DEBATE_TURN="${debateContext.turnCount || 0}" VERDICT_MODE="${debateContext.isVerdictRequest ? "true" : ""}" INTERVENTION_MODE="${debateContext.interventionMode || ""}"`
+    ? `DEBATE_TOPIC="${(debateContext.debateTopic || "").replace(/"/g, '\\"')}" DEBATE_USER_SIDE="${(debateContext.userSide || "").replace(/"/g, '\\"')}" DEBATE_AGENT_SIDE="${(debateContext.agentSide || "").replace(/"/g, '\\"')}" DEBATE_TURN="${debateContext.turnCount || 0}" VERDICT_MODE="${debateContext.isVerdictRequest ? "true" : ""}" INTERVENTION_MODE="${debateContext.interventionMode || ""}" AGENT_ROLE="${debateContext.agentRole || ""}" AI_VS_AI_MODE="${debateContext.aiVsAiMode ? "true" : ""}"`
     : "";
 
   // External API keys passthrough (for image generation, etc.)
@@ -85,9 +87,14 @@ export async function createAndLaunchAgent(
   // Launch agent fully detached with nohup — no streaming connection maintained.
   // The agent reads from the input file, runs query(), and calls CALLBACK_URL when done.
   const callbackUrl = `${baseUrl}/api/conversations/${conversationId}/status`;
+  // Use Claude Code OAuth token (local/subscription) if available, otherwise fall back to API key
+  const oauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN || "";
   const anthropicKey = process.env.ANTHROPIC_API_KEY || "";
+  const authEnvVars = oauthToken
+    ? `CLAUDE_CODE_OAUTH_TOKEN="${oauthToken}"`
+    : `ANTHROPIC_API_KEY="${anthropicKey}"`;
   await sandbox.commands.run(
-    `nohup bash -c 'cd /workspace/data && WORKSPACE_DIR=/workspace/data ANTHROPIC_API_KEY="${anthropicKey}" CALLBACK_URL="${callbackUrl}" RESUME_SESSION_ID="${sessionId || ""}" ${debateEnvVars} ${externalApiVars} npx tsx /app/agent.mts < /tmp/agent_input.txt >> /tmp/agent_stdout.log 2>> /tmp/agent_stderr.log' &>/dev/null &`
+    `nohup bash -c 'cd /workspace/data && WORKSPACE_DIR=/workspace/data ${authEnvVars} CALLBACK_URL="${callbackUrl}" RESUME_SESSION_ID="${sessionId || ""}" ${debateEnvVars} ${externalApiVars} npx tsx /app/agent.mts < /tmp/agent_input.txt >> /tmp/agent_stdout.log 2>> /tmp/agent_stderr.log' &>/dev/null &`
   );
 
   return { sandboxId: sandbox.sandboxId };

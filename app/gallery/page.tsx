@@ -55,20 +55,20 @@ export default function GalleryPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 h-[52px] flex items-center justify-between">
+      <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-5xl mx-auto px-5 h-[56px] flex items-center justify-between">
           <Link
             href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
           >
             <span className="text-lg">&#9878;</span>
-            <span className="font-mono text-sm font-medium">
-              기술 맞짱: 아키텍처 법정
+            <span className="font-mono text-sm font-black tracking-wider text-gradient-gold">
+              Toron
             </span>
           </Link>
           <Link
             href="/"
-            className="font-mono text-xs text-[var(--debate-gold)] hover:text-[var(--debate-gold)]/80 transition-colors"
+            className="font-mono text-xs text-[var(--debate-gold)] hover:text-[var(--debate-gold)]/80 transition-colors px-3 py-1.5 rounded-full border border-[var(--debate-gold)]/20 hover:bg-[var(--debate-gold)]/5"
           >
             + 새 토론
           </Link>
@@ -76,27 +76,30 @@ export default function GalleryPage() {
       </header>
 
       {/* Stats bar */}
-      <div className="border-b border-border/50 bg-card/30">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
+      <div className="border-b border-border/30 bg-card/20">
+        <div className="max-w-5xl mx-auto px-5 py-3.5 flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="relative w-2 h-2">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <div className="absolute inset-0 w-2 h-2 rounded-full bg-green-500 animate-ping opacity-75" />
+            </div>
             <span className="font-mono text-xs text-muted-foreground">
               {debates.filter((d) => d.status === "running").length}개 진행 중
             </span>
           </div>
-          <span className="font-mono text-xs text-muted-foreground/60">
+          <span className="font-mono text-xs text-muted-foreground/50">
             총 {debates.length}개 토론
           </span>
-          <span className="font-mono text-xs text-muted-foreground/60">
+          <span className="font-mono text-xs text-muted-foreground/50">
             {debates.reduce((sum, d) => sum + d.totalVotes, 0)}표 투표
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="font-mono text-xl font-bold mb-1">토론 갤러리</h1>
-        <p className="text-sm text-muted-foreground mb-8">
+      <div className="max-w-5xl mx-auto px-5 py-10">
+        <h1 className="font-mono text-2xl font-bold mb-1.5">토론 갤러리</h1>
+        <p className="text-sm text-muted-foreground/60 mb-10">
           진행 중인 토론을 구경하고 투표하세요
         </p>
 
@@ -120,7 +123,7 @@ export default function GalleryPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {debates.map((debate, i) => {
               const totalVotes = debate.votes.user + debate.votes.agent;
               const userPct =
@@ -134,11 +137,11 @@ export default function GalleryPage() {
                   key={debate.id}
                   href={`/debate/${debate.id}`}
                   className={cn(
-                    "group rounded-xl border bg-card/50 p-5 transition-all duration-200",
-                    "hover:bg-card/80 hover:border-border/80 active:scale-[0.98]",
+                    "group rounded-2xl border bg-card/30 p-5 transition-all duration-300",
+                    "hover:bg-card/60 hover:-translate-y-1 hover:shadow-lg active:translate-y-0",
                     isLive
-                      ? "border-green-500/30 hover:border-green-500/50"
-                      : "border-border/50",
+                      ? "border-green-500/20 hover:border-green-500/40 hover:shadow-green-500/5"
+                      : "border-border/40 hover:border-border/60 hover:shadow-black/10",
                     "animate-fade-in-up"
                   )}
                   style={{ animationDelay: `${i * 60}ms` }}

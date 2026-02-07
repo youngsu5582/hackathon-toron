@@ -50,12 +50,15 @@ export async function POST(request: NextRequest) {
       sessionId = conversation.sessionId || undefined;
     } else {
       // New conversation - create record first (with debate metadata if provided)
+      const isAiVsAi = debateMetadata?.debateMode === "ai-vs-ai";
       conversation = await prisma.conversation.create({
         data: {
           status: "idle",
           debateTopic: debateMetadata?.topic,
           userSide: debateMetadata?.userSide,
           agentSide: debateMetadata?.agentSide,
+          debateMode: isAiVsAi ? "ai-vs-ai" : "user-vs-ai",
+          currentSide: isAiVsAi ? "sideA" : null,
         },
       });
 
@@ -133,12 +136,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine AI vs AI specific parameters
+    const isAiVsAiMode = conversation.debateMode === "ai-vs-ai";
+    const agentRole = isAiVsAiMode
+      ? (conversation.currentSide === "sideB" ? "agent-b" : "agent-a") as "agent-a" | "agent-b"
+      : undefined;
+
+    // For AI vs AI, don't resume sessions (each agent gets fresh context)
+    const effectiveSessionId = isAiVsAiMode ? undefined : sessionId;
+
     // Create sandbox and launch agent (fire-and-forget, no streaming connection)
     const { sandboxId } = await createAndLaunchAgent(
       volumeId,
       conversation.id,
       enrichedContent,
-      sessionId,
+      effectiveSessionId,
       {
         debateTopic: conversation.debateTopic || undefined,
         userSide: conversation.userSide || undefined,
@@ -146,6 +158,8 @@ export async function POST(request: NextRequest) {
         turnCount: conversation.turnCount,
         isVerdictRequest: isVerdictRequest || false,
         interventionMode,
+        agentRole,
+        aiVsAiMode: isAiVsAiMode,
       }
     );
 

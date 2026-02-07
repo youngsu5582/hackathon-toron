@@ -22,8 +22,8 @@ export async function generateMetadata({
 
     if (!conversation || !conversation.debateTopic) {
       return {
-        title: "기술 맞짱: 아키텍처 법정",
-        description: "AI와 기술 토론을 벌여보세요!",
+        title: "Toron - AI 토론 아레나",
+        description: "AI와 치열한 토론을 벌여보세요!",
       };
     }
 
@@ -34,7 +34,7 @@ export async function generateMetadata({
           ? "완료"
           : conversation.status;
 
-    const title = `${conversation.debateTopic} — 기술 맞짱`;
+    const title = `${conversation.debateTopic} — Toron`;
     const description = `${conversation.userSide} vs ${conversation.agentSide} | 라운드 ${conversation.turnCount} | ${statusLabel}`;
 
     return {
@@ -44,7 +44,7 @@ export async function generateMetadata({
         title,
         description,
         type: "website",
-        siteName: "기술 맞짱: 아키텍처 법정",
+        siteName: "Toron - AI 토론 아레나",
       },
       twitter: {
         card: "summary",
@@ -54,8 +54,8 @@ export async function generateMetadata({
     };
   } catch {
     return {
-      title: "기술 맞짱: 아키텍처 법정",
-      description: "AI와 기술 토론을 벌여보세요!",
+      title: "Toron - AI 토론 아레나",
+      description: "AI와 치열한 토론을 벌여보세요!",
     };
   }
 }

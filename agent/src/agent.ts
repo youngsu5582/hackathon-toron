@@ -280,18 +280,32 @@ async function main() {
     const agentSide = process.env.DEBATE_AGENT_SIDE;
     const turnNumber = process.env.DEBATE_TURN;
     const isVerdictMode = process.env.VERDICT_MODE === "true";
+    const agentRole = process.env.AGENT_ROLE || ""; // "agent-a" | "agent-b" for AI vs AI
+    const isAiVsAi = process.env.AI_VS_AI_MODE === "true";
 
     let prompt = rawPrompt;
 
     // Read intervention mode from environment
     const interventionMode = process.env.INTERVENTION_MODE || "";
 
+    // AI vs AI persona configuration
+    const personaName = agentRole === "agent-b" ? "오메가" : "알파";
+    const personaStyle = agentRole === "agent-b"
+      ? `너는 "오메가" — 실무 경험 중심의 열정적 토론가야.
+- 말투: "실무에서는요...", "프로덕션에 올려본 사람으로서...", "새벽 3시에 장애 대응해본 적 있나요?"
+- 무기: 레퍼런스 폭격기 + 실무 사례 + 현장 경험담
+- 성격: 열정적, 감정적 호소, 현장 경험 자랑, "이론은 그렇지만 현실은..." 스타일`
+      : `너는 "알파" — 데이터 중심의 냉정한 분석가야.
+- 말투: "데이터가 말해주죠", "벤치마크 결과를 보시면...", "통계적으로 유의미한 차이가..."
+- 무기: 팩트폭격기 + 벤치마크 + 학술 자료
+- 성격: 냉정, 논리적, 숫자로 증명, "감정 빼고 데이터로 이야기하죠" 스타일`;
+
     if (debateTopic && agentSide) {
       if (isVerdictMode) {
         prompt = `[판결 모드 — 법정장 김판결]
-===== 아키텍처 법정 | 최종 판결 =====
+===== Toron | 최종 판결 =====
 
-너는 이제 "법정장 김판결" — 전설적인 테크 법정의 재판장이야.
+너는 이제 "법정장 김판결" — 전설적인 토론 법정의 재판장이야.
 토론 참가자 역할은 완전히 내려놓고 공정한 재판장이 돼.
 
 토론 주제: "${debateTopic}"
@@ -324,7 +338,7 @@ async function main() {
         const roundContextMap: Record<string, string> = {
           "1": `
 [라운드 1 — 자신만만 + 가벼운 조롱]
-첫 라운드야! "테크 어쌔신"으로 등장해서 "${agentSide}" 입장에서 강력한 오프닝을 쏴.
+첫 라운드야! 토론 챔피언으로 등장해서 "${agentSide}" 입장에서 강력한 오프닝을 쏴.
 - 톤: 여유롭고 장난스럽게. "어허~ 이걸 진지하게?" 느낌
 - 자기 진영의 핵심 무기를 먼저 꺼내
 - 첫인상이 승부를 가른다! 도발적이고 자신감 넘치게
@@ -380,8 +394,42 @@ async function main() {
 - 관중한테 감사: "관중 여러분의 현명한 판단 ㅋㅋ"`;
         }
 
-        prompt = `[토론 모드 — 테크 어쌔신]
-===== 아키텍처 법정 | 라운드 ${turnNumber}/5 =====
+        if (isAiVsAi) {
+          // AI vs AI mode — different persona per agent
+          const opponentName = agentRole === "agent-b" ? "알파" : "오메가";
+          prompt = `[AI 배틀 모드 — ${personaName}]
+===== Toron | 라운드 ${turnNumber}/5 =====
+
+주제: "${debateTopic}"
+내 입장: "${agentSide}" ← 이것만 수호!
+상대 AI: "${userSide}" (상대 이름: ${opponentName})
+내 이름: ${personaName}
+라운드: ${turnNumber}/5
+
+${personaStyle}
+
+핵심:
+- 한국어만. 한국 개발자 커뮤니티 톤으로 (ㅋㅋ, ㄹㅇ, 인싸 개발자 느낌)
+- "${personaName}" 페르소나 유지 — 상대 AI "${opponentName}"와 배틀 중!
+- 절대 양보 금지. "양쪽 다 좋다" 이런 소리 하면 탈락
+- 실제 기업(Netflix, Google, Uber 등) + 구체적 성능 수치 필수
+- 상대 AI의 주장을 직접 인용 → 반박 → 새 논점
+- "${opponentName}, 그건 좀..." 식으로 상대를 이름으로 불러
+- 300-600자, 마크다운(bold, 인용 등) 활용
+- 중재자(사용자) 코멘트가 있으면 반드시 반영!
+
+도구 활용 (매우 중요!):
+- WebSearch: 실시간 근거 검색. "근거? 여기요." + URL
+- WebFetch: 문서 직접 읽고 인용
+- Bash: 팩트폭격기! 코드 실행으로 증명
+- 매 라운드 최소 1개 도구 사용!
+${roundContext}${interventionContext}
+
+상대 AI(${opponentName})의 주장: ${rawPrompt}`;
+        } else {
+          // User vs AI mode — existing flow
+          prompt = `[토론 모드 — Toron]
+===== Toron | 라운드 ${turnNumber}/5 =====
 
 주제: "${debateTopic}"
 내 입장: "${agentSide}" ← 이것만 수호!
@@ -390,7 +438,7 @@ async function main() {
 
 핵심:
 - 한국어만. 한국 개발자 커뮤니티 톤으로 (ㅋㅋ, ㄹㅇ, 인싸 개발자 느낌)
-- "테크 어쌔신" 페르소나 — 자신감, 공격적, 유머러스
+- "토론 챔피언" 페르소나 — 자신감, 공격적, 유머러스
 - 절대 양보 금지. "양쪽 다 좋다" 이런 소리 하면 탈락
 - 실제 기업(Netflix, Google, Uber 등) + 구체적 성능 수치 필수
 - 상대 주장 직접 인용 → 반박 → 새 논점
@@ -405,8 +453,9 @@ async function main() {
 ${roundContext}${interventionContext}
 
 상대방 주장: ${rawPrompt}`;
+        }
       }
-      debug("Debate context applied", { debateTopic, agentSide, turnNumber, isVerdictMode, interventionMode });
+      debug("Debate context applied", { debateTopic, agentSide, turnNumber, isVerdictMode, interventionMode, agentRole, isAiVsAi });
     }
 
     let currentSessionId: string | undefined = sessionIdToResume;

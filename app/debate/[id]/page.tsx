@@ -62,8 +62,8 @@ export default function DebatePage({
       try {
         await navigator.share({
           title: data?.debateTopic
-            ? `${data.debateTopic} - 기술 맞짱`
-            : "기술 맞짱: 아키텍처 법정",
+            ? `${data.debateTopic} - Toron`
+            : "Toron - AI 기술 토론 아레나",
           url: window.location.href,
         });
       } catch {
@@ -124,15 +124,15 @@ export default function DebatePage({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 h-[52px] flex items-center justify-between">
+      <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto px-5 h-[56px] flex items-center justify-between">
           <Link
             href="/gallery"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
           >
             <span className="text-lg">&#9878;</span>
-            <span className="font-mono text-sm font-medium">
-              기술 맞짱
+            <span className="font-mono text-sm font-black tracking-wider text-gradient-gold">
+              Toron
             </span>
           </Link>
           <div className="flex items-center gap-2">
