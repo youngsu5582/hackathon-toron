@@ -115,6 +115,8 @@ export default function Home() {
       return;
     if (!isDone && status !== "running") return;
 
+    // AI vs AI turns take 30+ seconds each; poll less aggressively to save DB connections
+    const pollMs = isAiBattleInProgress ? 5000 : 2000;
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/conversations/${conversationId}`);
@@ -165,7 +167,7 @@ export default function Home() {
       } catch (error) {
         console.error("Polling error:", error);
       }
-    }, 2000);
+    }, pollMs);
 
     return () => clearInterval(pollInterval);
   }, [

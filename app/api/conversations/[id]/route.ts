@@ -16,11 +16,24 @@ export async function GET(
   try {
     const { id } = await params;
 
+    // Single query with all relations to minimize DB connections
     const conversation = await prisma.conversation.findUnique({
       where: { id },
       include: {
-        _count: {
-          select: { votes: true },
+        votes: { select: { side: true } },
+        comments: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            nickname: true,
+            content: true,
+            side: true,
+            isTagIn: true,
+            createdAt: true,
+          },
+        },
+        turns: {
+          orderBy: { turnNumber: "asc" },
         },
       },
     });
@@ -32,29 +45,8 @@ export async function GET(
       );
     }
 
-    // Count votes by side
-    const [userVotes, agentVotes] = await Promise.all([
-      prisma.vote.count({
-        where: { conversationId: id, side: "user" },
-      }),
-      prisma.vote.count({
-        where: { conversationId: id, side: "agent" },
-      }),
-    ]);
-
-    // Fetch comments
-    const comments = await prisma.comment.findMany({
-      where: { conversationId: id },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        nickname: true,
-        content: true,
-        side: true,
-        isTagIn: true,
-        createdAt: true,
-      },
-    });
+    const userVotes = conversation.votes.filter((v) => v.side === "user").length;
+    const agentVotes = conversation.votes.filter((v) => v.side === "agent").length;
 
     const response: ConversationResponse = {
       id: conversation.id,
@@ -67,7 +59,7 @@ export async function GET(
       turnCount: conversation.turnCount,
       maxTurns: conversation.maxTurns,
       votes: { user: userVotes, agent: agentVotes },
-      comments: comments.map((c) => ({
+      comments: conversation.comments.map((c) => ({
         ...c,
         createdAt: c.createdAt.toISOString(),
       })),
@@ -76,13 +68,9 @@ export async function GET(
       userVerdict: conversation.userVerdict || undefined,
     };
 
-    // For AI vs AI mode, fetch debate turns
+    // For AI vs AI mode, include debate turns
     if (conversation.debateMode === "ai-vs-ai") {
-      const turns = await prisma.debateTurn.findMany({
-        where: { conversationId: id },
-        orderBy: { turnNumber: "asc" },
-      });
-      response.turns = turns.map((t) => ({
+      response.turns = conversation.turns.map((t) => ({
         id: t.id,
         turnNumber: t.turnNumber,
         side: t.side,

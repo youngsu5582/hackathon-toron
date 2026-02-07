@@ -78,31 +78,12 @@ export async function POST(
         const lastResponse = extractLastAssistantText(entries);
 
         if (lastResponse) {
-          // Save the turn to DB
           const currentSide = conversation.currentSide || "sideA";
           const sideLabel =
             currentSide === "sideA"
               ? conversation.userSide || "Side A"
               : conversation.agentSide || "Side B";
           const persona = currentSide === "sideA" ? "알파" : "오메가";
-
-          await prisma.debateTurn.create({
-            data: {
-              conversationId: id,
-              turnNumber: conversation.turnCount,
-              side: currentSide,
-              sideLabel,
-              persona,
-              content: lastResponse,
-            },
-          });
-
-          // Kill the completed sandbox before launching the next one
-          if (conversation.sandboxId) {
-            await killSandbox(conversation.sandboxId);
-          }
-
-          // Swap sides and launch next agent
           const nextSide = currentSide === "sideA" ? "sideB" : "sideA";
           const nextAgentRole =
             nextSide === "sideA" ? "agent-a" : "agent-b";
@@ -115,12 +96,40 @@ export async function POST(
               ? conversation.agentSide!
               : conversation.userSide!;
 
-          // Gather moderator comments for injection
-          const recentComments = await prisma.comment.findMany({
-            where: { conversationId: id },
-            orderBy: { createdAt: "desc" },
-            take: 5,
-          });
+          // Batch all DB writes in a single transaction to reduce connection usage
+          const [, recentComments, updatedConversation] =
+            await prisma.$transaction([
+              prisma.debateTurn.create({
+                data: {
+                  conversationId: id,
+                  turnNumber: conversation.turnCount,
+                  side: currentSide,
+                  sideLabel,
+                  persona,
+                  content: lastResponse,
+                },
+              }),
+              prisma.comment.findMany({
+                where: { conversationId: id },
+                orderBy: { createdAt: "desc" },
+                take: 5,
+              }),
+              prisma.conversation.update({
+                where: { id },
+                data: {
+                  turnCount: { increment: 1 },
+                  currentSide: nextSide,
+                  status: "running",
+                  sessionId: sessionId || conversation.sessionId,
+                  sandboxId: null,
+                },
+              }),
+            ]);
+
+          // Kill the completed sandbox before launching the next one
+          if (conversation.sandboxId) {
+            await killSandbox(conversation.sandboxId);
+          }
 
           let nextContent = lastResponse;
           if (recentComments.length > 0) {
@@ -130,18 +139,6 @@ export async function POST(
               .join("\n");
             nextContent = `${lastResponse}\n\n[중재자 & 관중 코멘트]\n${commentLines}`;
           }
-
-          // Increment turn count, swap side, keep status "running" (never go to "completed")
-          const updatedConversation = await prisma.conversation.update({
-            where: { id },
-            data: {
-              turnCount: { increment: 1 },
-              currentSide: nextSide,
-              status: "running",
-              sessionId: sessionId || conversation.sessionId,
-              sandboxId: null, // Will be set below
-            },
-          });
 
           // Launch next agent (no session resume — fresh session each turn)
           const { sandboxId: nextSandboxId } = await createAndLaunchAgent(
