@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Settings } from "lucide-react";
 
 interface DebateItem {
   id: string;
@@ -66,12 +67,21 @@ export default function GalleryPage() {
               Toron
             </span>
           </Link>
-          <Link
-            href="/"
-            className="font-mono text-xs text-[var(--debate-gold)] hover:text-[var(--debate-gold)]/80 transition-colors px-3 py-1.5 rounded-full border border-[var(--debate-gold)]/20 hover:bg-[var(--debate-gold)]/5"
-          >
-            + 새 토론
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin"
+              className="p-2 hover:bg-muted/50 rounded-lg transition-all duration-200"
+              title="관리"
+            >
+              <Settings className="size-4 text-muted-foreground" />
+            </Link>
+            <Link
+              href="/"
+              className="font-mono text-xs text-[var(--debate-gold)] hover:text-[var(--debate-gold)]/80 transition-colors px-3 py-1.5 rounded-full border border-[var(--debate-gold)]/20 hover:bg-[var(--debate-gold)]/5"
+            >
+              + 새 토론
+            </Link>
+          </div>
         </div>
       </header>
 

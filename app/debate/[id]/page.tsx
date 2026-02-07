@@ -8,7 +8,7 @@ import { VerdictDisplay } from "@/components/debate/verdict-display";
 import { AudiencePanel } from "@/components/debate/audience-panel";
 import { cn } from "@/lib/utils";
 import type { SessionEntry, ConversationResponse, AudienceComment } from "@/lib/types";
-import { Check, Copy, Share2 } from "lucide-react";
+import { Check, Copy, Share2, Settings } from "lucide-react";
 
 export default function DebatePage({
   params,
@@ -169,6 +169,13 @@ export default function DebatePage({
               <Share2 className="size-3" />
               공유
             </button>
+            <Link
+              href="/admin"
+              className="p-1.5 hover:bg-muted/50 rounded-lg transition-all duration-200"
+              title="관리"
+            >
+              <Settings className="size-3.5 text-muted-foreground/40" />
+            </Link>
           </div>
         </div>
       </header>

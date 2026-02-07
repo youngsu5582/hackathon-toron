@@ -22,7 +22,7 @@ import { AiBattleView } from "@/components/debate/ai-battle-view";
 import { UserVerdictForm } from "@/components/debate/user-verdict-form";
 import { DEBATE_TOPICS, type DebateTopic } from "@/lib/debate-topics";
 import type { SessionEntry, ConversationResponse, AudienceComment, Evidence, DebateTurnData } from "@/lib/types";
-import { PanelRight, Gavel, LayoutGrid } from "lucide-react";
+import { PanelRight, Gavel, LayoutGrid, Settings } from "lucide-react";
 import Link from "next/link";
 
 // Pending message type for optimistic UI
@@ -396,6 +396,13 @@ export default function Home() {
             title="토론 갤러리"
           >
             <LayoutGrid className="size-4 text-muted-foreground" />
+          </Link>
+          <Link
+            href="/admin"
+            className="p-2 hover:bg-muted/50 rounded-lg transition-all duration-200 hover:scale-105"
+            title="관리"
+          >
+            <Settings className="size-4 text-muted-foreground" />
           </Link>
           {!showWorkspace && hasMessages && (
             <button
