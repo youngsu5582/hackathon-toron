@@ -1,10 +1,13 @@
 FROM node:20-bookworm
 
-# Install system dependencies
+# Install system dependencies (includes Python for benchmarks + charts)
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential curl git gh && \
+    build-essential curl git gh python3 python3-pip && \
     rm -rf /var/lib/apt/lists/*
+
+# Install matplotlib for benchmark chart generation
+RUN pip3 install matplotlib --break-system-packages
 
 # Install Claude Code CLI (required by Claude Agent SDK)
 # Pin to specific version to match session schema types

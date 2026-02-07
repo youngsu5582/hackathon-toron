@@ -39,8 +39,15 @@ function FileViewerComponent({
     selectedFilePath?.endsWith(".markdown");
   const isHtmlFile =
     selectedFilePath?.endsWith(".html") || selectedFilePath?.endsWith(".htm");
+  const isImageFile =
+    selectedFilePath?.endsWith(".png") ||
+    selectedFilePath?.endsWith(".jpg") ||
+    selectedFilePath?.endsWith(".jpeg") ||
+    selectedFilePath?.endsWith(".gif") ||
+    selectedFilePath?.endsWith(".webp") ||
+    selectedFilePath?.endsWith(".svg");
 
-  const hasPreviewSupport = isMarkdownFile || isHtmlFile;
+  const hasPreviewSupport = isMarkdownFile || isHtmlFile || isImageFile;
 
   // Reset to preview mode when file changes (if it supports preview)
   useEffect(() => {
@@ -154,7 +161,19 @@ function FileViewerComponent({
             )}
           </div>
         )}
-        {viewMode === "preview" && isMarkdownFile && fileContentString ? (
+        {viewMode === "preview" && isImageFile && selectedFilePath ? (
+          <div className="h-full overflow-auto p-4 flex items-center justify-center bg-black/20">
+            <img
+              src={`data:image/${selectedFilePath.split(".").pop()};base64,${fileContentString}`}
+              alt={selectedFilePath.split("/").pop() || "image"}
+              className="max-w-full max-h-full object-contain rounded"
+              onError={(e) => {
+                // Fallback: try as plain URL if base64 fails
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        ) : viewMode === "preview" && isMarkdownFile && fileContentString ? (
           <div className="h-full overflow-auto p-4 prose prose-sm prose-invert max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {fileContentString}
