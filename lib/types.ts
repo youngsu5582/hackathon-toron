@@ -240,11 +240,18 @@ export interface StatusCallbackRequest {
 
 export type EvidenceType = "web-search" | "web-fetch" | "bash" | "code-write";
 
+export interface SearchLink {
+  title: string;
+  url: string;
+  snippet?: string;
+}
+
 export interface Evidence {
   id: string;
   type: EvidenceType;
   title: string;
   content: string;
+  links?: SearchLink[];
   url?: string;
   query?: string;
   command?: string;

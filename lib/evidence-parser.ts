@@ -1,6 +1,7 @@
 import type {
   SessionEntry,
   Evidence,
+  SearchLink,
   ToolUseBlock,
   ToolResultBlock,
   ContentBlock,
@@ -19,6 +20,74 @@ function getToolResultText(result: ToolResultBlock): string {
       .join("\n");
   }
   return "";
+}
+
+/**
+ * Parse WebSearch result text to extract structured links.
+ *
+ * WebSearch results come in formats like:
+ *   Links: [{"title":"...","url":"..."},{"title":"...","url":"..."}]
+ * or:
+ *   [{"title":"...","url":"...","snippet":"..."}]
+ */
+function parseSearchLinks(text: string): SearchLink[] {
+  const links: SearchLink[] = [];
+
+  // Try to find JSON array of links in the text
+  // Pattern 1: Links: [{...}]
+  // Pattern 2: just [{...}] somewhere in the text
+  const jsonArrayMatch = text.match(/\[[\s\S]*?\{[\s\S]*?"title"[\s\S]*?"url"[\s\S]*?\}[\s\S]*?\]/);
+  if (jsonArrayMatch) {
+    try {
+      const parsed = JSON.parse(jsonArrayMatch[0]);
+      if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          if (item.title && item.url) {
+            links.push({
+              title: String(item.title),
+              url: String(item.url),
+              snippet: item.snippet ? String(item.snippet) : undefined,
+            });
+          }
+        }
+      }
+    } catch {
+      // JSON parse failed, try regex fallback
+    }
+  }
+
+  // Fallback: extract individual {"title":"...","url":"..."} objects
+  if (links.length === 0) {
+    const objectPattern = /\{"title":"([^"]+)","url":"([^"]+)"(?:,"snippet":"([^"]*)")?\}/g;
+    let match;
+    while ((match = objectPattern.exec(text)) !== null) {
+      links.push({
+        title: match[1],
+        url: match[2],
+        snippet: match[3] || undefined,
+      });
+    }
+  }
+
+  return links;
+}
+
+/**
+ * Get a clean summary from WebSearch result text (without raw JSON).
+ */
+function getSearchSummary(text: string): string {
+  // Extract the query description line
+  const queryMatch = text.match(/^Web search results for query: "(.+?)"/m);
+  const queryLine = queryMatch ? `"${queryMatch[1]}" 검색 결과` : "";
+
+  // Remove raw JSON links array from the text for a cleaner summary
+  const cleaned = text
+    .replace(/Links:\s*\[[\s\S]*?\]/, "")
+    .replace(/\[[\s\S]*?\{[\s\S]*?"title"[\s\S]*?\}[\s\S]*?\]/, "")
+    .trim();
+
+  // Return remaining non-JSON text or the query line
+  return cleaned || queryLine;
 }
 
 /**
@@ -56,11 +125,14 @@ export function extractEvidence(entries: SessionEntry[]): Evidence[] {
         case "WebSearch": {
           const query = (toolUse.input as { query?: string }).query || "";
           if (!query) break;
+          const links = parseSearchLinks(resultText);
+          const summary = getSearchSummary(resultText);
           evidence.push({
             id: toolUse.id,
             type: "web-search",
             title: `검색: ${query}`,
-            content: resultText.slice(0, 2000),
+            content: summary,
+            links: links.length > 0 ? links : undefined,
             query,
             isError: result?.is_error,
             timestamp: entry.timestamp,
@@ -72,10 +144,16 @@ export function extractEvidence(entries: SessionEntry[]): Evidence[] {
           const url = (toolUse.input as { url?: string }).url || "";
           const prompt = (toolUse.input as { prompt?: string }).prompt || "";
           if (!url) break;
+          let hostname: string;
+          try {
+            hostname = new URL(url).hostname;
+          } catch {
+            hostname = url;
+          }
           evidence.push({
             id: toolUse.id,
             type: "web-fetch",
-            title: `웹 참조: ${new URL(url).hostname}`,
+            title: `웹 참조: ${hostname}`,
             content: resultText.slice(0, 3000),
             url,
             query: prompt,
