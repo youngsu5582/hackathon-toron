@@ -88,8 +88,12 @@ export function extractEvidence(entries: SessionEntry[]): Evidence[] {
         case "Bash": {
           const command = (toolUse.input as { command?: string }).command || "";
           if (!command) break;
-          // Skip simple utility commands
-          if (/^(cd|ls|pwd|echo|cat|mkdir|which|sync)\b/.test(command.trim())) break;
+          // Skip commands that are ONLY simple utilities (no chaining with &&, ||, |, ;)
+          const trimmedCmd = command.trim();
+          const isChainedCommand = /[&|;]/.test(trimmedCmd);
+          const isSoloSimpleCommand = !isChainedCommand &&
+            /^(ls|pwd|echo|cat|mkdir|which|sync|cd)\b/.test(trimmedCmd);
+          if (isSoloSimpleCommand) break;
           evidence.push({
             id: toolUse.id,
             type: "bash",
